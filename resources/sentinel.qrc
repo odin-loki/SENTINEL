@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/sentinel.png</file>
+        <file>icons/map.png</file>
+        <file>icons/events.png</file>
+        <file>icons/analytics.png</file>
+        <file>icons/leads.png</file>
+        <file>icons/audit.png</file>
+        <file>icons/settings.png</file>
+        <file>icons/refresh.png</file>
+        <file>icons/export.png</file>
+        <file>styles/dark.qss</file>
+    </qresource>
+</RCC>

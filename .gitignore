@@ -1,0 +1,56 @@
+# Build output
+build/
+build2/
+*.exe
+*.dll
+*.o
+*.obj
+*.a
+*.lib
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+*.ninja
+.ninja_deps
+.ninja_log
+
+# Qt generated
+*.moc
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*_autogen/
+
+# IDE / OS
+.vscode/
+.vs/
+*.suo
+*.user
+*.ncb
+*.sdf
+*.opensdf
+*.db
+*.VC.opendb
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Qt Creator
+*.pro.user
+*.pro.user.*
+*.qmlproject.user
+*.creator.user
+CMakeLists.txt.user
+
+# Test output files
+build/*.txt
+build/tests/
+
+# Temporary
+*.tmp
+*.bak
+*.swp
+*~

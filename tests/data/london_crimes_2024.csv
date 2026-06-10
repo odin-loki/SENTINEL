@@ -1,0 +1,101 @@
+id,date,crime_type,latitude,longitude,location,outcome
+uk_001,2024-01-03,burglary,51.5074,-0.1278,On or near High Street,resolved
+uk_002,2024-01-06,theft,51.4978,-0.1543,On or near Church Road,unresolved
+uk_003,2024-01-09,assault,51.5123,-0.1432,On or near Station Road,under investigation
+uk_004,2024-01-13,robbery,51.4834,-0.1654,On or near Oxford Street,resolved
+uk_005,2024-01-16,vehicle crime,51.5201,-0.0987,On or near Victoria Road,unresolved
+uk_006,2024-01-19,drug offence,51.4612,-0.1876,On or near King Street,under investigation
+uk_007,2024-01-23,burglary,51.5341,-0.1567,On or near Brixton Road,resolved
+uk_008,2024-01-26,theft,51.4756,-0.1789,On or near Camden High Street,unresolved
+uk_009,2024-01-30,assault,51.5089,-0.0876,On or near Baker Street,under investigation
+uk_010,2024-02-02,robbery,51.4945,-0.1765,On or near Whitechapel Road,resolved
+uk_011,2024-02-05,vehicle crime,51.5456,-0.1678,On or near Portobello Road,unresolved
+uk_012,2024-02-08,drug offence,51.4501,-0.1987,On or near Borough High Street,under investigation
+uk_013,2024-02-12,burglary,51.5312,-0.0765,On or near Tottenham Court Road,resolved
+uk_014,2024-02-15,theft,51.4867,-0.0543,On or near Edgware Road,unresolved
+uk_015,2024-02-19,assault,51.5012,-0.0654,On or near Bishopsgate,under investigation
+uk_016,2024-02-22,robbery,51.4723,-0.1345,On or near Cheapside,resolved
+uk_017,2024-02-26,vehicle crime,51.5178,-0.0321,On or near The Mall,unresolved
+uk_018,2024-03-02,drug offence,51.4623,-0.0432,On or near Cannon Street,under investigation
+uk_019,2024-03-05,burglary,51.5234,-0.0210,On or near Newgate Street,resolved
+uk_020,2024-03-08,theft,51.4867,-0.1456,On or near Market Street,unresolved
+uk_021,2024-03-12,assault,51.5074,-0.1278,On or near High Street,under investigation
+uk_022,2024-03-15,robbery,51.4978,-0.1543,On or near Church Road,resolved
+uk_023,2024-03-19,vehicle crime,51.5123,-0.1432,On or near Station Road,unresolved
+uk_024,2024-03-23,drug offence,51.4834,-0.1654,On or near Oxford Street,under investigation
+uk_025,2024-03-26,burglary,51.5201,-0.0987,On or near Victoria Road,resolved
+uk_026,2024-03-30,theft,51.4612,-0.1876,On or near King Street,unresolved
+uk_027,2024-04-02,assault,51.5341,-0.1567,On or near Brixton Road,under investigation
+uk_028,2024-04-05,robbery,51.4756,-0.1789,On or near Camden High Street,resolved
+uk_029,2024-04-08,vehicle crime,51.5089,-0.0876,On or near Baker Street,unresolved
+uk_030,2024-04-12,drug offence,51.4945,-0.1765,On or near Whitechapel Road,under investigation
+uk_031,2024-04-15,burglary,51.5456,-0.1678,On or near Portobello Road,resolved
+uk_032,2024-04-19,theft,51.4501,-0.1987,On or near Borough High Street,unresolved
+uk_033,2024-04-23,assault,51.5312,-0.0765,On or near Tottenham Court Road,under investigation
+uk_034,2024-04-26,robbery,51.4867,-0.0543,On or near Edgware Road,resolved
+uk_035,2024-04-30,vehicle crime,51.5012,-0.0654,On or near Bishopsgate,unresolved
+uk_036,2024-05-03,drug offence,51.4723,-0.1345,On or near Cheapside,under investigation
+uk_037,2024-05-07,burglary,51.5178,-0.0321,On or near The Mall,resolved
+uk_038,2024-05-11,theft,51.4623,-0.0432,On or near Cannon Street,unresolved
+uk_039,2024-05-15,assault,51.5234,-0.0210,On or near Newgate Street,under investigation
+uk_040,2024-05-19,robbery,51.4867,-0.1456,On or near Market Street,resolved
+uk_041,2024-05-23,vehicle crime,51.5074,-0.1278,On or near High Street,unresolved
+uk_042,2024-05-27,drug offence,51.4978,-0.1543,On or near Church Road,under investigation
+uk_043,2024-05-31,burglary,51.5123,-0.1432,On or near Station Road,resolved
+uk_044,2024-06-03,theft,51.4834,-0.1654,On or near Oxford Street,unresolved
+uk_045,2024-06-07,assault,51.5201,-0.0987,On or near Victoria Road,under investigation
+uk_046,2024-06-11,robbery,51.4612,-0.1876,On or near King Street,resolved
+uk_047,2024-06-15,vehicle crime,51.5341,-0.1567,On or near Brixton Road,unresolved
+uk_048,2024-06-19,drug offence,51.4756,-0.1789,On or near Camden High Street,under investigation
+uk_049,2024-06-23,burglary,51.5089,-0.0876,On or near Baker Street,resolved
+uk_050,2024-06-27,theft,51.4945,-0.1765,On or near Whitechapel Road,unresolved
+uk_051,2024-06-30,assault,51.5456,-0.1678,On or near Portobello Road,under investigation
+uk_052,2024-07-03,robbery,51.4501,-0.1987,On or near Borough High Street,resolved
+uk_053,2024-07-07,vehicle crime,51.5312,-0.0765,On or near Tottenham Court Road,unresolved
+uk_054,2024-07-11,drug offence,51.4867,-0.0543,On or near Edgware Road,under investigation
+uk_055,2024-07-15,burglary,51.5012,-0.0654,On or near Bishopsgate,resolved
+uk_056,2024-07-19,theft,51.4723,-0.1345,On or near Cheapside,unresolved
+uk_057,2024-07-23,assault,51.5178,-0.0321,On or near The Mall,under investigation
+uk_058,2024-07-27,robbery,51.4623,-0.0432,On or near Cannon Street,resolved
+uk_059,2024-07-31,vehicle crime,51.5234,-0.0210,On or near Newgate Street,unresolved
+uk_060,2024-08-03,drug offence,51.4867,-0.1456,On or near Market Street,under investigation
+uk_061,2024-08-07,burglary,51.5074,-0.1278,On or near High Street,resolved
+uk_062,2024-08-11,theft,51.4978,-0.1543,On or near Church Road,unresolved
+uk_063,2024-08-15,assault,51.5123,-0.1432,On or near Station Road,under investigation
+uk_064,2024-08-19,robbery,51.4834,-0.1654,On or near Oxford Street,resolved
+uk_065,2024-08-23,vehicle crime,51.5201,-0.0987,On or near Victoria Road,unresolved
+uk_066,2024-08-27,drug offence,51.4612,-0.1876,On or near King Street,under investigation
+uk_067,2024-08-31,burglary,51.5341,-0.1567,On or near Brixton Road,resolved
+uk_068,2024-09-03,theft,51.4756,-0.1789,On or near Camden High Street,unresolved
+uk_069,2024-09-07,assault,51.5089,-0.0876,On or near Baker Street,under investigation
+uk_070,2024-09-11,robbery,51.4945,-0.1765,On or near Whitechapel Road,resolved
+uk_071,2024-09-15,vehicle crime,51.5456,-0.1678,On or near Portobello Road,unresolved
+uk_072,2024-09-19,drug offence,51.4501,-0.1987,On or near Borough High Street,under investigation
+uk_073,2024-09-23,burglary,51.5312,-0.0765,On or near Tottenham Court Road,resolved
+uk_074,2024-09-27,theft,51.4867,-0.0543,On or near Edgware Road,unresolved
+uk_075,2024-09-30,assault,51.5012,-0.0654,On or near Bishopsgate,under investigation
+uk_076,2024-10-03,robbery,51.4723,-0.1345,On or near Cheapside,resolved
+uk_077,2024-10-07,vehicle crime,51.5178,-0.0321,On or near The Mall,unresolved
+uk_078,2024-10-11,drug offence,51.4623,-0.0432,On or near Cannon Street,under investigation
+uk_079,2024-10-15,burglary,51.5234,-0.0210,On or near Newgate Street,resolved
+uk_080,2024-10-19,theft,51.4867,-0.1456,On or near Market Street,unresolved
+uk_081,2024-10-23,assault,51.5074,-0.1278,On or near High Street,under investigation
+uk_082,2024-10-27,robbery,51.4978,-0.1543,On or near Church Road,resolved
+uk_083,2024-10-31,vehicle crime,51.5123,-0.1432,On or near Station Road,unresolved
+uk_084,2024-11-03,drug offence,51.4834,-0.1654,On or near Oxford Street,under investigation
+uk_085,2024-11-07,burglary,51.5201,-0.0987,On or near Victoria Road,resolved
+uk_086,2024-11-11,theft,51.4612,-0.1876,On or near King Street,unresolved
+uk_087,2024-11-15,assault,51.5341,-0.1567,On or near Brixton Road,under investigation
+uk_088,2024-11-19,robbery,51.4756,-0.1789,On or near Camden High Street,resolved
+uk_089,2024-11-23,vehicle crime,51.5089,-0.0876,On or near Baker Street,unresolved
+uk_090,2024-11-27,drug offence,51.4945,-0.1765,On or near Whitechapel Road,under investigation
+uk_091,2024-11-30,burglary,51.5456,-0.1678,On or near Portobello Road,resolved
+uk_092,2024-12-03,theft,51.4501,-0.1987,On or near Borough High Street,unresolved
+uk_093,2024-12-07,assault,51.5312,-0.0765,On or near Tottenham Court Road,under investigation
+uk_094,2024-12-11,robbery,51.4867,-0.0543,On or near Edgware Road,resolved
+uk_095,2024-12-15,vehicle crime,51.5012,-0.0654,On or near Bishopsgate,unresolved
+uk_096,2024-12-19,drug offence,51.4723,-0.1345,On or near Cheapside,under investigation
+uk_097,2024-12-21,burglary,51.5178,-0.0321,On or near The Mall,resolved
+uk_098,2024-12-23,theft,51.4623,-0.0432,On or near Cannon Street,unresolved
+uk_099,2024-12-27,assault,51.5234,-0.0210,On or near Newgate Street,under investigation
+uk_100,2024-12-30,robbery,51.4867,-0.1456,On or near Market Street,resolved
