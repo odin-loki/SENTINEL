@@ -1,7 +1,7 @@
 # SENTINEL — Crime Analytics & Predictive Threat Assessment System
 
 <p align="center">
-  <strong>C++23 · Qt 6 · SQLite · 194 passing tests</strong>
+  <strong>C++23 · Qt 6 · SQLite · 197 passing tests</strong>
 </p>
 
 > A fully auditable, standalone desktop application for spatiotemporal crime prediction, investigative lead generation, and anomaly detection. Every prediction is traceable to its data source, mathematical model, and quantified uncertainty. No proprietary APIs. No black-box AI.
@@ -64,6 +64,7 @@ SENTINEL ingests heterogeneous public crime data streams, applies a layered prob
 | `BayesianHierarchical` | Gamma-Poisson conjugate hierarchy with empirical Bayes hyperparameter estimation |
 | `RiskForecaster` | Multi-day zone risk forecast combining Poisson + temporal features + recent escalation |
 | `EnsemblePredictor` | Weighted ensemble of Poisson + Hawkes + isotonic calibration, epistemic/aleatoric uncertainty decomposition |
+| `NearRepeatVictimisation` | Knox ratio space-time clustering test, linear decay alert scoring, crime-type calibrated bandwidths |
 | `TemporalFeatures` | Cyclical encoding (sin/cos), lunar phase, sun altitude, payday proximity, night/weekend flags |
 
 ### Inference Engine
@@ -119,7 +120,7 @@ SENTINEL ingests heterogeneous public crime data streams, applies a layered prob
 │  │                   MODEL STACK                            │   │
 │  │  PoissonBaseline  │  HawkesProcess  │  SeriesDetector   │   │
 │  │  KDEHotspot       │  GPRegression   │  BayesianHier.    │   │
-│  │  RiskForecaster   │  EnsemblePredictor                  │   │
+│  │  RiskForecaster   │  EnsemblePredictor │ NearRepeatVict.│   │
 │  └──────────────────────────────────────────────────────────┘   │
 │          │                                                        │
 │          ▼                                                        │
@@ -155,7 +156,12 @@ Conditional intensity: `λ(t,x) = μ + Σᵢ α·exp(-β(t-tᵢ))·G(x-xᵢ,σ)`
 Normalises spatial (km), temporal (days) and MO similarity into a 3D feature space. Applies DBSCAN with calibrated crime-type-specific epsilon values from published near-repeat research.
 
 ### Rossmo CGT Geographic Profile
-`P(x) = Σᵢ [φ/d(x,cᵢ)^f + (1-φ)·B^(g-f)/d(x,cᵢ)^g]` with buffer zone term. Surface normalised, 50%/80% search areas computed by thresholding.
+For distance `d` from grid point to crime site `cᵢ`, with buffer radius `B`:
+- `d ≤ B`: `B^(g−f) / (2B − d)^g` (buffer zone — suppresses anchor near crime sites)
+- `B < d < 4B`: `1 / d^f` (distance decay)
+- `d ≥ 4B`: negligible
+
+Surface is summed over all crime sites, normalised; 50%/80% search areas computed by thresholding.
 
 ### Bayesian Hierarchical Model
 Gamma-Poisson conjugacy: `λ_z | data ~ Gamma(α₀+k, β₀+E)`. Hyperparameters α₀, β₀ estimated via empirical Bayes method of moments across zones.
@@ -217,7 +223,8 @@ sentinel/
 │   │   ├── GPRegression.h/cpp     # Gaussian Process regression
 │   │   ├── BayesianHierarchical.h/cpp # Gamma-Poisson hierarchical model
 │   │   ├── RiskForecaster.h/cpp   # Multi-day zone risk forecasting
-│   │   └── EnsemblePredictor.h/cpp # Weighted ensemble + calibration
+│   │   ├── EnsemblePredictor.h/cpp # Weighted ensemble + calibration
+│   │   └── NearRepeatVictimisation.h/cpp # Knox test + near-repeat alerts
 │   ├── inference/
 │   │   ├── GeographicProfiler.h/cpp # Rossmo CGT surface
 │   │   ├── MOAnalyser.h/cpp       # TF-IDF cosine MO similarity
@@ -242,7 +249,7 @@ sentinel/
 │       ├── DebugConsoleWidget.h/cpp
 │       └── SettingsWidget.h/cpp
 └── tests/
-    ├── CMakeLists.txt          # 186 test targets
+    ├── CMakeLists.txt          # 196 test targets
     └── test_*.cpp              # Unit, integration, stress, and UI tests
 ```
 
@@ -295,7 +302,7 @@ cmake --build build -j$(nproc)
 
 ## Testing
 
-SENTINEL has **186 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
+SENTINEL has **196 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
 
 ```bash
 # Run all tests (parallel, 4 jobs)
@@ -316,7 +323,7 @@ ctest -N
 | Core / Database | `test_database_*`, `test_crime_event_*` | Schema versioning, CRUD, migration, stress |
 | Ingest | `test_csv_*`, `test_uk_police_*`, `test_data_quality_*` | CSV parsing, API JSON, quality scoring |
 | NLP | `test_mo_extractor_*`, `test_crime_classifier_*` | Entry methods, weapons, severity, sentiment |
-| Models | `test_poisson_*`, `test_hawkes_*`, `test_series_*`, `test_kde_*`, `test_gp_*`, `test_bayesian_*`, `test_risk_*`, `test_ensemble_*` | PMF/PPF, intensity, surface, grid, posterior |
+| Models | `test_poisson_*`, `test_hawkes_*`, `test_series_*`, `test_kde_*`, `test_gp_*`, `test_bayesian_*`, `test_risk_*`, `test_ensemble_*`, `test_near_repeat_*` | PMF/PPF, intensity, surface, grid, posterior, Knox ratio |
 | Inference | `test_geographic_*`, `test_mo_analyser_*`, `test_evidence_*`, `test_anomaly_*`, `test_cooffending_*`, `test_hint_*` | CGT surface, TF-IDF, Bayesian LR, PageRank |
 | Benchmarking | `test_benchmark_*`, `test_calibration_*`, `test_bias_*` | PAI, AUC, ECE, fairness metrics |
 | UI (headless) | `test_*_widget*`, `test_audit_log_*`, `test_settings_*` | Qt offscreen, signal/slot, model data |
@@ -392,7 +399,8 @@ All pipelines are deterministic given the same input data and configuration. No 
 | Method | Reference |
 |---|---|
 | Hawkes self-exciting process | Mohler et al. (2011). *Self-exciting point process modeling of crime.* JASA 106(493):100–108 |
-| Near-repeat victimisation | Johnson et al. (2007). *Space-time patterns of risk.* British Journal of Criminology 47(3):363–383 |
+| Near-repeat victimisation | Sherman et al. (1989). *Hot spots of predatory crime.* Criminology 27(1):27–56 |
+| Near-repeat space-time risk | Johnson et al. (2007). *Space-time patterns of risk.* British Journal of Criminology 47(3):363–383 |
 | Geographic profiling (Rossmo CGT) | Rossmo, D.K. (2000). *Geographic Profiling.* CRC Press |
 | Bayesian evidence weighting | Taroni et al. (2014). *Bayesian Networks for Probabilistic Inference and Decision Analysis in Forensic Science.* Wiley |
 | Co-offending networks (PageRank) | Page et al. (1999). *The PageRank Citation Ranking.* Stanford Tech Report |

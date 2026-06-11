@@ -170,7 +170,7 @@ void HawkesProcess::optimise(const QVector<SpatiotemporalEvent>& events,
         alpha = goldenSectionSearch(
             [&](double v) {
                 return negLogLikelihood(mu, v, beta, sigma, events);
-            }, 0.0, 0.99);
+            }, 1e-6, 0.99);
 
         // Optimise β — lower bound 0.1 prevents tCutoff from exploding to O(N^2)
         beta = goldenSectionSearch(
@@ -205,7 +205,8 @@ void HawkesProcess::optimise(const QVector<SpatiotemporalEvent>& events,
 bool HawkesProcess::fit(const QVector<SpatiotemporalEvent>& events,
                          int maxIterations)
 {
-    if (events.size() < 3) return false;
+    m_fitted = false;
+    if (events.isEmpty()) return false;
 
     // Sort by time
     QVector<SpatiotemporalEvent> sorted = events;

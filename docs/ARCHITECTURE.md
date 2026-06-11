@@ -20,10 +20,10 @@ SENTINEL is structured as a layered pipeline. Each layer has strictly defined re
 └──────────────────────────┬───────────────────────────────────┘
                            │ TemporalFeatureVector
 ┌──────────────────────────▼───────────────────────────────────┐
-│  MODEL STACK                                                  │
+│  MODEL STACK (9 statistical models)                           │
 │  PoissonBaseline  HawkesProcess  SeriesDetector              │
 │  KDEHotspot       GPRegression   BayesianHierarchical        │
-│  RiskForecaster   EnsemblePredictor                          │
+│  RiskForecaster   EnsemblePredictor  NearRepeatVictimisation │
 └──────────────────────────┬───────────────────────────────────┘
                            │ predictions + uncertainty
 ┌──────────────────────────▼───────────────────────────────────┐
@@ -105,31 +105,41 @@ method                QString — "rossmo_cgt"
 Output of AnomalyDetector.
 
 ```
-combinedScore    double — aggregated anomaly magnitude
-lat, lon         double — event location
-signalReasons    std::vector<QString>
-crimeId          int
+eventId           QString
+isolationScore    double
+lofScore          double
+zScoreTemporal    double
+zScoreSpatial     double
+combinedScore     double — aggregated anomaly magnitude [0,1]
+isAnomaly         bool
+signalReasons     std::vector<QString>
 ```
 
 ### `SeriesMatch`
 Output of SeriesDetector.
 
 ```
-seriesId         int
-linkProbability  double
-compositeScore   double
-memberCount      int
-crimeType        QString
+seriesId              QString
+memberCount           int
+linkProbability       double
+spatialDistanceM      double
+temporalDistanceDays  double
+moSimilarity          double
+compositeScore        double
+method                QString
 ```
 
 ### `NetworkLead`
 Output of CoOffendingAnalyser.
 
 ```
-personId         QString
-riskScore        double
-reasoning        QString
-connectionType   QString
+personId              QString
+connectionType        QString — "direct_cooffender" | "second_degree" | "venue_linked"
+sharedIncidents       int
+centralityScore       double — PageRank / betweenness
+communityId           int
+riskScore             double
+reasoning             QString
 ```
 
 ---
@@ -246,4 +256,5 @@ aleatoric  = mean over models of each model's internal variance
 epistemic  = variance over models of their mean predictions
 ```
 
+Combined standard deviation: `σ_total = sqrt(aleatoric² + epistemic²)`.  
 Both components are propagated to `EnsemblePrediction.ciLow95` / `ciHigh95` (computed as `probCrime ± 1.96 * σ_total`) and are visible in the Analytics → Calibration tab.

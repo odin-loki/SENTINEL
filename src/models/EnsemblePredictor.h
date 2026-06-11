@@ -74,6 +74,9 @@ public:
     // Brier score
     static double brierScore(const QVector<QPair<double, double>>& predActual);
 
+    // Test / inspection helper — apply isotonic calibration to a raw probability
+    double applyCalibration(double rawProb) const { return applyCal(rawProb); }
+
 private:
     double applyCal(double rawProb) const;
 

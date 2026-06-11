@@ -510,6 +510,9 @@ set_tests_properties(test_ensemble_predictor_deep PROPERTIES TIMEOUT 60)
 sentinel_test(models_edge_cases test_models_edge_cases.cpp)
 set_tests_properties(models_edge_cases PROPERTIES TIMEOUT 60)
 
+sentinel_test(hawkes_ensemble_deep test_hawkes_ensemble_deep.cpp)
+set_tests_properties(hawkes_ensemble_deep PROPERTIES TIMEOUT 60)
+
 sentinel_test(test_gp_regression_deep2      test_gp_regression_deep2.cpp)
 set_tests_properties(test_gp_regression_deep2 PROPERTIES TIMEOUT 60)
 
@@ -705,3 +708,15 @@ sentinel_test(ui_comprehensive
     ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
 )
 set_tests_properties(ui_comprehensive PROPERTIES LABELS "ui")
+
+# ── Map / Audit / Heatmap widget audit tests (iteration 5) ─────────────────
+sentinel_test(ui_map_audit_heatmap
+    test_ui_map_audit_heatmap.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AuditLogWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+)
+set_tests_properties(ui_map_audit_heatmap PROPERTIES LABELS "ui")
+
+sentinel_test(nearrepeat_csv_mo test_nearrepeat_csv_mo.cpp)
+set_tests_properties(nearrepeat_csv_mo PROPERTIES TIMEOUT 30)

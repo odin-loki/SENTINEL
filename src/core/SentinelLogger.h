@@ -35,6 +35,12 @@ public:
     // Keep last N messages in ring buffer for the console widget.
     void setMaxEntries(int n);
     QVector<LogEntry> recent(int n = 200) const;
+    int  count() const;
+
+    // Filter helpers for the DebugConsoleWidget
+    QVector<LogEntry> filterByLevel(QtMsgType minLevel) const;
+    QVector<LogEntry> filterByCategory(const QString& category) const;
+
     void clear();
 
 signals:

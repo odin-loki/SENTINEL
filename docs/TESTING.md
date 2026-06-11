@@ -2,7 +2,7 @@
 
 ## Overview
 
-SENTINEL has **194 test targets** achieving comprehensive coverage across every pipeline layer. Tests use the Qt Test framework and run via CTest.
+SENTINEL has **197 test targets** achieving comprehensive coverage across every pipeline layer. Tests use the Qt Test framework and run via CTest.
 
 ---
 
@@ -75,7 +75,8 @@ ctest -N
 - `test_series_detector_deep` — linkage probability calibration
 - `test_series_detector_linkage` — Haversine, Jaccard, near-repeat params
 - `test_series_linkage_calibration` — confusion matrix on known series
-- `test_near_repeat_victimisation` — repeat-interval analysis
+- `test_near_repeat_victimisation` — Knox ratio, decay kernels, alert scoring
+- `series_near_repeat` — SeriesDetector + NearRepeatVictimisation integration
 
 **Models — KDE / GP / Bayesian / Ensemble**
 - `test_kde_hotspot` — grid computation, normalization

@@ -154,6 +154,94 @@ private slots:
         QVERIFY2(r100.size() >= r2.size(),
                  "recent(100) should return >= entries than recent(2)");
     }
+
+    // 11. count() reflects the number of buffered entries
+    void testCountMatchesRecent()
+    {
+        SentinelLogger::instance().clear();
+        QCOMPARE(SentinelLogger::instance().count(), 0);
+
+        SentinelLogger::instance().install();
+        qDebug("Count test A");
+        qDebug("Count test B");
+        qDebug("Count test C");
+        SentinelLogger::instance().uninstall();
+
+        const int n = SentinelLogger::instance().count();
+        const int r = SentinelLogger::instance().recent(1000).size();
+        QCOMPARE(n, r);
+    }
+
+    // 12. count() is 0 after clear()
+    void testCountZeroAfterClear()
+    {
+        SentinelLogger::instance().install();
+        qDebug("Some entry to populate buffer");
+        SentinelLogger::instance().uninstall();
+        SentinelLogger::instance().clear();
+        QCOMPARE(SentinelLogger::instance().count(), 0);
+    }
+
+    // 13. filterByLevel(QtWarningMsg) excludes Debug entries
+    void testFilterByLevelExcludesLower()
+    {
+        SentinelLogger::instance().clear();
+        SentinelLogger::instance().install();
+        qDebug("Debug entry FILTERLEVEL_TEST");
+        qWarning("Warning entry FILTERLEVEL_TEST");
+        SentinelLogger::instance().uninstall();
+
+        const auto all  = SentinelLogger::instance().recent(1000);
+        const auto warn = SentinelLogger::instance().filterByLevel(QtWarningMsg);
+
+        // filterByLevel must not include Debug messages
+        for (const auto& e : warn)
+            QVERIFY2(e.level >= QtWarningMsg, "filterByLevel(Warning) must exclude Debug");
+
+        // Total filtered count <= all
+        QVERIFY(warn.size() <= all.size());
+    }
+
+    // 14. filterByLevel(QtDebugMsg) returns all entries (min level)
+    void testFilterByLevelDebugReturnsAll()
+    {
+        SentinelLogger::instance().clear();
+        SentinelLogger::instance().install();
+        qDebug("Debug A");
+        qWarning("Warning A");
+        SentinelLogger::instance().uninstall();
+
+        const auto all   = SentinelLogger::instance().recent(1000);
+        const auto debug = SentinelLogger::instance().filterByLevel(QtDebugMsg);
+        QCOMPARE(debug.size(), all.size());
+    }
+
+    // 15. filterByCategory returns only matching category entries
+    void testFilterByCategoryMatchesSubstring()
+    {
+        SentinelLogger::instance().clear();
+        SentinelLogger::instance().install();
+        qCDebug(lcIngest)    << "Ingest test entry CATFILTER";
+        qCDebug(lcModels)    << "Models test entry CATFILTER";
+        SentinelLogger::instance().uninstall();
+
+        const auto ingestOnly = SentinelLogger::instance().filterByCategory("ingest");
+        for (const auto& e : ingestOnly)
+            QVERIFY2(e.category.contains("ingest", Qt::CaseInsensitive),
+                     "filterByCategory('ingest') must match only ingest category");
+    }
+
+    // 16. filterByCategory with unknown category returns empty
+    void testFilterByCategoryUnknownReturnsEmpty()
+    {
+        SentinelLogger::instance().clear();
+        SentinelLogger::instance().install();
+        qDebug("Generic debug entry");
+        SentinelLogger::instance().uninstall();
+
+        const auto r = SentinelLogger::instance().filterByCategory("nonexistent_xyz");
+        QVERIFY(r.isEmpty());
+    }
 };
 
 QTEST_MAIN(SentinelLoggerFilterTest)

@@ -1,6 +1,6 @@
 # SENTINEL — Core Data Structures
 
-All shared structures are defined in `src/core/CrimeEvent.h`.
+Shared structures are defined primarily in `src/core/CrimeEvent.h`. Model-specific output structs live in their respective headers (e.g. `HotspotRegion` in `KDEHotspot.h`, `NearRepeatAlert` in `NearRepeatVictimisation.h`, `TemporalFeatureVector` in `TemporalFeatures.h`, `PersonIncidentRecord` / `NetworkNode` in `CoOffendingAnalyser.h`, `HintEngineInput` in `HintEngine.h`).
 
 ---
 
@@ -109,14 +109,130 @@ Classification result from `CrimeClassifier`.
 ### `ForecastDay`
 | Field | Type | Description |
 |---|---|---|
+| `zoneId` | `QString` | Zone identifier |
 | `date` | `QDate` | Forecast date |
 | `riskScore` | `double` | Aggregated risk [0,1] |
-| `alertLevel` | `AlertLevel` | NORMAL \| ELEVATED \| HIGH \| CRITICAL |
-| `lowerCI`, `upperCI` | `double` | Credible interval bounds |
+| `baselineProb` | `double` | Poisson P(crime > 0) |
+| `escalationFactor` | `double` | Recency boost [1, ∞) |
+| `temporalFactor` | `double` | Cyclical pattern multiplier |
+| `expectedCount` | `double` | E[crimes] |
+| `rank` | `int` | Rank within forecast window |
+| `explanation` | `QString` | Human-readable rationale |
+
+### `ZoneForecast`
+| Field | Type | Description |
+|---|---|---|
+| `zoneId` | `QString` | Zone identifier |
+| `days` | `QVector<ForecastDay>` | Per-day forecasts |
+| `weeklyRisk` | `double` | Sum of daily risks over horizon |
+| `alertLevel` | `int` | 0=Normal, 1=Elevated, 2=High, 3=Critical |
+
+### `ZonePosterior`
+Output of `BayesianHierarchical`.
+
+| Field | Type | Description |
+|---|---|---|
+| `zoneId` | `QString` | Zone identifier |
+| `alphaPrior`, `betaPrior` | `double` | Gamma hyperprior parameters |
+| `alphaPost`, `betaPost` | `double` | Gamma posterior parameters |
+| `posteriorMean` | `double` | E[λ\|data] = α_post / β_post |
+| `posteriorVar` | `double` | Var[λ\|data] |
+| `credibleLow`, `credibleHigh` | `double` | 5th / 95th percentile of posterior |
+| `observedCount` | `int` | Observed crime count |
+| `exposure` | `double` | Training window (days) |
+
+### `HotspotRegion`
+Output of `KDEHotspot::findHotspots()`.
+
+| Field | Type | Description |
+|---|---|---|
+| `centroidLat`, `centroidLon` | `double` | Peak centroid coordinates |
+| `latMin`, `latMax`, `lonMin`, `lonMax` | `double` | Bounding box |
+| `peakDensity` | `double` | Kernel density at centroid |
+| `totalMass` | `double` | Integrated density in region |
+| `crimeCount` | `int` | Crimes within bounding box |
+| `rank` | `int` | 1 = hottest |
+
+### `NearRepeatAlert`
+Output of `NearRepeatVictimisation::analyse()`.
+
+| Field | Type | Description |
+|---|---|---|
+| `eventId` | `QString` | Current event ID |
+| `priorEventId` | `QString` | Prior event within near-repeat window |
+| `alertScore` | `double` | Proximity score [0,1] |
+| `spatialDistanceM` | `double` | Haversine distance in metres |
+| `temporalDistanceDays` | `double` | Absolute time gap in days |
+
+### `TemporalFeatureVector`
+Output of `TemporalFeatures::compute()`.
+
+| Field | Type | Description |
+|---|---|---|
+| `hourSin`, `hourCos` | `double` | Cyclical hour encoding |
+| `dowSin`, `dowCos` | `double` | Cyclical day-of-week encoding |
+| `monthSin`, `monthCos` | `double` | Cyclical month encoding |
+| `doySin`, `doyCos` | `double` | Cyclical day-of-year encoding |
+| `hourRaw`, `dowRaw` | `int` | Raw hour (0–23) and weekday (0=Mon) |
+| `isWeekend`, `isNight` | `bool` | Weekend and night (22:00–05:59) flags |
+| `isPublicHoliday` | `bool` | Public holiday flag |
+| `daysFromPayday` | `int` | Days to nearest fortnightly payday |
+| `weekOfMonth` | `int` | Week index within month |
+| `lunarPhase` | `double` | 0=new moon, 0.5=full moon |
+| `sunAltitudeDeg` | `double` | Approximate sun altitude (degrees) |
+| `isDark` | `bool` | True when sun altitude < −6° |
+
+### `SeriesEvent`
+Input record for `SeriesDetector` and `NearRepeatVictimisation`.
+
+| Field | Type | Description |
+|---|---|---|
+| `eventId` | `QString` | Event identifier |
+| `lat`, `lon` | `double` | WGS-84 coordinates |
+| `tDays` | `double` | Days since reference epoch |
+| `crimeType` | `QString` | Normalised crime category |
+| `moText` | `QString` | Canonical MO string for similarity |
 
 ---
 
 ## Inference Structures
+
+### `HintEngineInput`
+Input bundle for `HintEngine::generate()`.
+
+| Field | Type | Description |
+|---|---|---|
+| `event` | `CrimeEvent` | Query event |
+| `seriesMatches` | `QVector<SeriesMatch>` | Series linkage candidates |
+| `moMatches` | `QVector<MOMatch>` | MO similarity matches |
+| `geoProfile` | `std::optional<GeographicProfile>` | Rossmo CGT profile |
+| `networkLeads` | `QVector<NetworkLead>` | Co-offending network leads |
+| `evidenceWeights` | `QVector<EvidenceWeight>` | Bayesian evidence weights |
+| `anomalySignal` | `std::optional<AnomalySignal>` | Anomaly detector output |
+| `dataQuality` | `double` | Data quality multiplier [0,1] |
+
+### `PersonIncidentRecord`
+Input record for `CoOffendingAnalyser::buildGraph()`.
+
+| Field | Type | Description |
+|---|---|---|
+| `personId` | `QString` | Person identifier |
+| `incidentId` | `QString` | Incident identifier |
+| `role` | `QString` | "suspect" \| "witness" \| "victim" \| "associate" |
+| `roleWeight` | `double` | Role weight (e.g. suspect=1.0, associate=0.5) |
+
+### `NetworkNode`
+Internal graph node from `CoOffendingAnalyser::nodes()`.
+
+| Field | Type | Description |
+|---|---|---|
+| `personId` | `QString` | Person identifier |
+| `pageRank` | `double` | PageRank centrality |
+| `betweenness` | `double` | Brandes betweenness centrality |
+| `communityId` | `int` | Community label (−1 if unassigned) |
+| `degree` | `int` | Node degree |
+| `incidentIds` | `QStringList` | Associated incident IDs |
+| `neighbours` | `QMap<QString, double>` | Adjacent personId → edge weight |
 
 ### `InvestigativeLead`
 Output of `HintEngine`.
@@ -153,6 +269,7 @@ Output of `AnomalyDetector`.
 |---|---|---|
 | `eventId` | `QString` | Associated event ID |
 | `isolationScore` | `double` | Isolation Forest score |
+| `lofScore` | `double` | Local Outlier Factor score |
 | `zScoreTemporal` | `double` | Temporal Z-score |
 | `zScoreSpatial` | `double` | Spatial Z-score |
 | `combinedScore` | `double` | Aggregated anomaly magnitude [0,1] |
@@ -203,12 +320,30 @@ Output of `CoOffendingAnalyser`.
 | `statusLabel` | `QString` | "Well-calibrated" \| "Overconfident" \| "Underconfident" |
 
 ### `BiasReport`
+Per-group-pair fairness comparison from `BiasAuditor`.
+
 | Field | Type | Description |
 |---|---|---|
-| `disparateImpact` | `double` | Selection rate ratio between groups |
-| `equalOpportunityDiff` | `double` | TPR difference between groups |
-| `feedbackLoopRisk` | `double` | Estimated feedback amplification |
-| `groupStats` | `QMap<QString, GroupStats>` | Per-group statistics |
+| `metric` | `QString` | "disparate_impact", "equal_opportunity", etc. |
+| `groupA`, `groupB` | `QString` | Compared group labels |
+| `valueA`, `valueB` | `double` | Metric value per group |
+| `ratio` | `double` | valueA / valueB |
+| `flagged` | `bool` | True if ratio outside [0.80, 1.25] |
+| `notes` | `QString` | Explanation text |
+
+### `GroupStats`
+Per-group statistics from `BiasAuditor::groupStats()`.
+
+| Field | Type | Description |
+|---|---|---|
+| `groupId` | `QString` | Group label |
+| `nEvents` | `int` | Total events in group |
+| `nFlagged` | `int` | Events flagged above threshold |
+| `flagRate` | `double` | nFlagged / nEvents |
+| `meanPred` | `double` | Mean predicted probability |
+| `actualRate` | `double` | Observed positive rate |
+| `nTP` | `int` | True positives |
+| `nActualPos` | `int` | Total actual positives |
 
 ---
 
@@ -217,10 +352,12 @@ Output of `CoOffendingAnalyser`.
 ### `ProvenanceEntry`
 | Field | Type | Description |
 |---|---|---|
-| `eventId` | `QString` | Event this entry belongs to |
-| `stage` | `QString` | Pipeline stage name |
-| `description` | `QString` | What was done at this stage |
 | `timestamp` | `QDateTime` | When this stage ran |
+| `eventId` | `QString` | Event this entry belongs to |
+| `stage` | `QString` | "ingest" \| "nlp" \| "model" \| "inference" \| "output" |
+| `action` | `QString` | Action performed |
+| `detail` | `QString` | Human-readable detail |
+| `dataHash` | `QString` | SHA256 of input data (first 16 chars) |
 
 ### `LogEntry`
 `SentinelLogger` ring buffer entry.

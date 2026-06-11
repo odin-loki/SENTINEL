@@ -47,6 +47,34 @@ QVector<LogEntry> SentinelLogger::recent(int n) const
     return m_entries.mid(m_entries.size() - n);
 }
 
+int SentinelLogger::count() const
+{
+    QMutexLocker lock(&s_logMutex);
+    return m_entries.size();
+}
+
+QVector<LogEntry> SentinelLogger::filterByLevel(QtMsgType minLevel) const
+{
+    QMutexLocker lock(&s_logMutex);
+    QVector<LogEntry> result;
+    for (const auto& e : m_entries) {
+        if (e.level >= minLevel)
+            result.append(e);
+    }
+    return result;
+}
+
+QVector<LogEntry> SentinelLogger::filterByCategory(const QString& category) const
+{
+    QMutexLocker lock(&s_logMutex);
+    QVector<LogEntry> result;
+    for (const auto& e : m_entries) {
+        if (e.category.contains(category, Qt::CaseInsensitive))
+            result.append(e);
+    }
+    return result;
+}
+
 void SentinelLogger::clear()
 {
     QMutexLocker lock(&s_logMutex);
