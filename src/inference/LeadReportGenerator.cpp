@@ -26,7 +26,10 @@ LeadReport LeadReportGenerator::generate(const QString& caseId,
     }
     report.topConfidence = sorted.isEmpty() ? 0.0 : sorted.first().confidence;
 
-    // Store sorted leads for HTML export
+    // Assign ranks and store for both Markdown and HTML export
+    int displayRank = 1;
+    for (InvestigativeLead& lead : sorted)
+        lead.rank = displayRank++;
     report.leads = sorted;
 
     // Build Markdown
@@ -41,11 +44,8 @@ LeadReport LeadReportGenerator::generate(const QString& caseId,
               .arg(report.highConfidenceLeads);
     md += QStringLiteral("---\n\n");
 
-    int displayRank = 1;
-    for (InvestigativeLead lead : sorted) {
-        lead.rank = displayRank++;
+    for (const InvestigativeLead& lead : sorted)
         md += formatLead(lead);
-    }
 
     report.markdownText = md;
 

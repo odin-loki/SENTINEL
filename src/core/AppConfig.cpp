@@ -170,6 +170,14 @@ bool AppConfig::validate()
         alertCritical = std::min(1.0, alertHigh + 0.1);
         ok = false;
     }
+    // Chain fixup may push both alertHigh and alertCritical to 1.0 when
+    // alertElevated is very high (≥ 0.9). Reset to safe defaults in that case.
+    if (alertElevated >= alertHigh || alertHigh >= alertCritical) {
+        alertElevated = 0.30;
+        alertHigh     = 0.50;
+        alertCritical = 0.75;
+        ok = false;
+    }
 
     return ok;
 }

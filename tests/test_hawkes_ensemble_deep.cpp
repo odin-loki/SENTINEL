@@ -442,3 +442,4 @@ private slots:
 
 QTEST_MAIN(HawkesEnsembleDeepTest)
 #include "test_hawkes_ensemble_deep.moc"
+

@@ -794,3 +794,58 @@ set_tests_properties(temporal_features_deep2 PROPERTIES TIMEOUT 30)
 
 sentinel_test(poisson_baseline_deep2 test_poisson_baseline_deep2.cpp)
 set_tests_properties(poisson_baseline_deep2 PROPERTIES TIMEOUT 30)
+
+sentinel_test(calibration_analyser_deep2 test_calibration_analyser_deep2.cpp)
+set_tests_properties(calibration_analyser_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(mo_analyser_deep2 test_mo_analyser_deep2.cpp)
+set_tests_properties(mo_analyser_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(sentinel_logger_deep2 test_sentinel_logger_deep2.cpp)
+set_tests_properties(sentinel_logger_deep2 PROPERTIES TIMEOUT 30)
+
+sentinel_test(ensemble_deep2 test_ensemble_deep2.cpp)
+set_tests_properties(ensemble_deep2 PROPERTIES TIMEOUT 60)
+sentinel_test(risk_forecaster_deep2 test_risk_forecaster_deep2.cpp)
+set_tests_properties(risk_forecaster_deep2 PROPERTIES TIMEOUT 30)
+
+qt_add_executable(test_temporal_heatmap_deep2
+    test_temporal_heatmap_deep2.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+)
+target_include_directories(test_temporal_heatmap_deep2 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_temporal_heatmap_deep2 PRIVATE
+    sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
+add_test(NAME test_temporal_heatmap_deep2
+    COMMAND test_temporal_heatmap_deep2 -platform offscreen)
+set_tests_properties(test_temporal_heatmap_deep2 PROPERTIES
+    TIMEOUT 30
+    LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+)
+
+sentinel_test(appconfig_deep2 test_appconfig_deep2.cpp)
+set_tests_properties(appconfig_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(csv_importer_deep3 test_csv_importer_deep3.cpp)
+set_tests_properties(csv_importer_deep3 PROPERTIES TIMEOUT 30)
+
+qt_add_executable(test_database_deep2 test_database_deep2.cpp)
+target_include_directories(test_database_deep2 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_database_deep2 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_database_deep2 COMMAND test_database_deep2 -platform offscreen)
+set_tests_properties(test_database_deep2 PROPERTIES
+    TIMEOUT 30
+    LABELS "db"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+sentinel_test(lead_report_deep2 test_lead_report_deep2.cpp)
+set_tests_properties(lead_report_deep2 PROPERTIES TIMEOUT 30)
+
+sentinel_test(series_dbscan_deep2 test_series_dbscan_deep2.cpp)
+set_tests_properties(series_dbscan_deep2 PROPERTIES TIMEOUT 30)
+
+sentinel_test(series_detector_deep2 test_series_detector_deep2.cpp)
+set_tests_properties(series_detector_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(kde_hotspot_deep2 test_kde_hotspot_deep2.cpp)
+set_tests_properties(kde_hotspot_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(benchmark_metrics_deep2 test_benchmark_metrics_deep2.cpp)
+set_tests_properties(benchmark_metrics_deep2 PROPERTIES TIMEOUT 30)

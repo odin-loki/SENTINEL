@@ -154,7 +154,7 @@ private slots:
         RiskForecaster rf;
         rf.setAlertThresholds(0.3, 0.5, 0.75);
         QCOMPARE(classifyAlert(0.10, 0.3, 0.5, 0.75), 0);
-        QCOMPARE(alertLabelFor(0), QStringLiteral("NORMAL"));
+        QCOMPARE(alertLabelFor(0), QStringLiteral("Normal"));
     }
 
     void testAlertLevelElevated()
@@ -162,7 +162,7 @@ private slots:
         RiskForecaster rf;
         rf.setAlertThresholds(0.3, 0.5, 0.75);
         QCOMPARE(classifyAlert(0.35, 0.3, 0.5, 0.75), 1);
-        QCOMPARE(alertLabelFor(1), QStringLiteral("ELEVATED"));
+        QCOMPARE(alertLabelFor(1), QStringLiteral("Elevated"));
     }
 
     void testAlertLevelHigh()
@@ -170,7 +170,7 @@ private slots:
         RiskForecaster rf;
         rf.setAlertThresholds(0.3, 0.5, 0.75);
         QCOMPARE(classifyAlert(0.55, 0.3, 0.5, 0.75), 2);
-        QCOMPARE(alertLabelFor(2), QStringLiteral("HIGH"));
+        QCOMPARE(alertLabelFor(2), QStringLiteral("High"));
     }
 
     void testAlertLevelCritical()
@@ -178,7 +178,7 @@ private slots:
         RiskForecaster rf;
         rf.setAlertThresholds(0.3, 0.5, 0.75);
         QCOMPARE(classifyAlert(0.80, 0.3, 0.5, 0.75), 3);
-        QCOMPARE(alertLabelFor(3), QStringLiteral("CRITICAL"));
+        QCOMPARE(alertLabelFor(3), QStringLiteral("Critical"));
     }
 
     void testForecastDayCount()
@@ -467,3 +467,4 @@ private slots:
 
 QTEST_GUILESS_MAIN(RiskEnsembleDeepTest)
 #include "test_risk_ensemble_deep.moc"
+

@@ -107,9 +107,10 @@ QVector<int> SeriesDetector::dbscan(
             QVector<int> qNeighbours = regionQuery(q);
             if (qNeighbours.size() >= minPts) {
                 for (int nb : qNeighbours) {
-                    if (labels[nb] == -2 || labels[nb] == -1) {
-                        if (labels[nb] == -2) seeds.append(nb);
-                        // Will be relabelled in next iteration if border
+                    if (labels[nb] == -2) {
+                        seeds.append(nb);  // unvisited → queue for expansion
+                    } else if (labels[nb] == -1) {
+                        labels[nb] = clusterId;  // noise → border point
                     }
                 }
             }

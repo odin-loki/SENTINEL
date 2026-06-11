@@ -29,6 +29,51 @@ void TemporalHeatmapWidget::setData(const std::array<std::array<int,24>,7>& coun
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+void TemporalHeatmapWidget::setData(const QVector<CrimeEvent>& events)
+{
+    std::array<std::array<int,24>,7> counts{};
+    for (auto& row : counts) row.fill(0);
+    m_monthly.fill(0);
+
+    for (const auto& e : events) {
+        const QDateTime dt = e.occurredAt.value_or(e.timestamp);
+        const int hour = std::clamp(dt.time().hour(), 0, 23);
+        const int dow  = std::clamp(dt.date().dayOfWeek() - 1, 0, 6);
+        const int mon  = std::clamp(dt.date().month() - 1, 0, 11);
+        counts[dow][hour]++;
+        m_monthly[mon]++;
+    }
+
+    setData(counts);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+QVector<int> TemporalHeatmapWidget::hourlyData() const
+{
+    QVector<int> result(24, 0);
+    for (int d = 0; d < 7; ++d)
+        for (int h = 0; h < 24; ++h)
+            result[h] += m_counts[d][h];
+    return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+QVector<int> TemporalHeatmapWidget::dailyData() const
+{
+    QVector<int> result(7, 0);
+    for (int d = 0; d < 7; ++d)
+        for (int h = 0; h < 24; ++h)
+            result[d] += m_counts[d][h];
+    return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+QVector<int> TemporalHeatmapWidget::monthlyData() const
+{
+    return m_monthly;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 QColor TemporalHeatmapWidget::valueColor(double normalized) const
 {
     if (normalized <= 0.0) return QColor(15, 21, 48);  // #0f1530 near black

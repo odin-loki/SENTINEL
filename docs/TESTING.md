@@ -2,7 +2,7 @@
 
 ## Overview
 
-SENTINEL has **226 test targets** achieving comprehensive coverage across every pipeline layer. Tests use the Qt Test framework and run via CTest.
+SENTINEL has **240 test targets** achieving comprehensive coverage across every pipeline layer. Tests use the Qt Test framework and run via CTest.
 
 ---
 
@@ -202,3 +202,4 @@ QTEST_MAIN(TestPoissonBaseline)
 - **Qt offscreen platform** (`QT_QPA_PLATFORM=offscreen`) allows UI widget tests without a display server.
 - **`QSignalSpy`** is used throughout to verify async signal emissions.
 - Statistical tests include both correctness checks (PMF sums to 1, probabilities in [0,1]) and precision checks (within ε of analytical values).
+
