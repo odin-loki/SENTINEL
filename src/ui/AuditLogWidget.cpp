@@ -20,6 +20,7 @@ AuditLogWidget::AuditLogWidget(ProvenanceLog& log, QWidget* parent)
     , m_countLabel(nullptr)
 {
     setupUI();
+    refresh();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

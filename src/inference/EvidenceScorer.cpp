@@ -101,9 +101,8 @@ QPair<double,double> EvidenceScorer::getLRAndReliability(const QString& type) co
 EvidenceScorer::Result EvidenceScorer::score(double priorProbability,
                                               const QMap<QString,bool>& evidencePresence) const
 {
-    const double priorOdds = (priorProbability > 0.0 && priorProbability < 1.0)
-                             ? priorProbability / (1.0 - priorProbability)
-                             : 1.0;
+    const double clampedPrior = std::clamp(priorProbability, 1e-9, 1.0 - 1e-9);
+    const double priorOdds    = clampedPrior / (1.0 - clampedPrior);
     double runningOdds = priorOdds;
     double overallLR   = 1.0;
 
@@ -129,7 +128,8 @@ EvidenceScorer::Result EvidenceScorer::score(double priorProbability,
     }
 
     result.overallLikelihoodRatio  = overallLR;
-    result.posteriorProbability    = runningOdds / (1.0 + runningOdds);
+    result.posteriorProbability    = std::clamp(runningOdds / (1.0 + runningOdds),
+                                                  0.0, 1.0);
     return result;
 }
 

@@ -47,6 +47,6 @@ private:
                               const QVector<AnomalyFeatureVector>& data,
                               int k = 10) const;
 
-    static double euclidean4D(const AnomalyFeatureVector& a,
-                               const AnomalyFeatureVector& b);
+    double featureDistance(const AnomalyFeatureVector& a,
+                           const AnomalyFeatureVector& b) const;
 };

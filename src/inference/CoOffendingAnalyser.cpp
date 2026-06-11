@@ -255,10 +255,11 @@ QVector<NetworkLead> CoOffendingAnalyser::findLeads(
         const auto& node = m_graph[pid];
 
         int sharedCount = 0;
-        for (const auto& iid : node.incidentIds)
-            if (m_incidentPersons.contains(iid) &&
-                m_incidentPersons[iid].contains(pid))
+        for (const auto& iid : node.incidentIds) {
+            const auto& persons = m_incidentPersons.value(iid);
+            if (persons.size() > 1 && persons.contains(pid))
                 ++sharedCount;
+        }
 
         candidates.append({pid, sharedCount, QStringLiteral("direct_participant"),
                            riskScore(node, sharedCount)});

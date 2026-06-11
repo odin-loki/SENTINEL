@@ -68,6 +68,33 @@ double AnomalyDetector::zScoreSpatial(double lat, double lon) const
     return safeSqrt(zLat * zLat + zLon * zLon);
 }
 
+double AnomalyDetector::featureDistance(const AnomalyFeatureVector& a,
+                                         const AnomalyFeatureVector& b) const
+{
+    constexpr int NDIM = 5;
+    if (m_dimStats.size() < NDIM) {
+        const double dLat = a.lat - b.lat;
+        const double dLon = a.lon - b.lon;
+        const double dT   = a.tDays - b.tDays;
+        const double dH   = a.hourNorm - b.hourNorm;
+        const double dC   = static_cast<double>(a.crimeTypeCode - b.crimeTypeCode);
+        return safeSqrt(dLat*dLat + dLon*dLon + dT*dT + dH*dH + dC*dC);
+    }
+
+    auto normDelta = [&](double av, double bv, int dim) {
+        const double scale = std::max(m_dimStats[dim].stddev, 1e-9);
+        return (av - bv) / scale;
+    };
+
+    const double dLat = normDelta(a.lat, b.lat, 0);
+    const double dLon = normDelta(a.lon, b.lon, 1);
+    const double dT   = normDelta(a.tDays, b.tDays, 2);
+    const double dH   = normDelta(a.hourNorm, b.hourNorm, 3);
+    const double dC   = normDelta(static_cast<double>(a.crimeTypeCode),
+                                  static_cast<double>(b.crimeTypeCode), 4);
+    return safeSqrt(dLat*dLat + dLon*dLon + dT*dT + dH*dH + dC*dC);
+}
+
 double AnomalyDetector::isolationScore(const AnomalyFeatureVector& ev,
                                         const QVector<AnomalyFeatureVector>& context) const
 {
@@ -76,33 +103,36 @@ double AnomalyDetector::isolationScore(const AnomalyFeatureVector& ev,
     // A single-event context means the event is trivially isolated (no peers to form a cluster).
     if (context.size() == 1) return 1.0;
 
-    double meanLat = 0, meanLon = 0, meanT = 0, meanH = 0;
+    constexpr int NDIM = 5;
+    double means[NDIM] = {};
     for (const auto& e : context) {
-        meanLat += e.lat;   meanLon += e.lon;
-        meanT   += e.tDays; meanH   += e.hourNorm;
+        means[0] += e.lat;
+        means[1] += e.lon;
+        means[2] += e.tDays;
+        means[3] += e.hourNorm;
+        means[4] += static_cast<double>(e.crimeTypeCode);
     }
     const double n = static_cast<double>(context.size());
-    meanLat /= n; meanLon /= n; meanT /= n; meanH /= n;
+    for (int d = 0; d < NDIM; ++d)
+        means[d] /= n;
 
-    const double dLat = (ev.lat - meanLat)  / std::max(m_trainLatStd, 1e-9);
-    const double dLon = (ev.lon - meanLon)  / std::max(m_trainLonStd, 1e-9);
-    const double dT   = (ev.tDays - meanT)  / std::max(m_trainTStd, 1e-9);
-    const double dH   = (ev.hourNorm - meanH);
+    auto normDelta = [&](double val, double mean, int dim) {
+        const double scale = (m_dimStats.size() > dim)
+                             ? std::max(m_dimStats[dim].stddev, 1e-9)
+                             : 1.0;
+        return (val - mean) / scale;
+    };
 
-    const double dist = safeSqrt(dLat*dLat + dLon*dLon + dT*dT + dH*dH);
+    const double dLat = normDelta(ev.lat, means[0], 0);
+    const double dLon = normDelta(ev.lon, means[1], 1);
+    const double dT   = normDelta(ev.tDays, means[2], 2);
+    const double dH   = normDelta(ev.hourNorm, means[3], 3);
+    const double dC   = normDelta(static_cast<double>(ev.crimeTypeCode), means[4], 4);
+
+    const double dist = safeSqrt(dLat*dLat + dLon*dLon + dT*dT + dH*dH + dC*dC);
     // Expected average path length for isolation forest with n samples ≈ 2*H(n-1)
     // Simplified: score = dist / (2 * sqrt(NDIM)), clamped to [0,1]
-    return std::min(dist / (2.0 * std::sqrt(4.0)), 1.0);
-}
-
-double AnomalyDetector::euclidean4D(const AnomalyFeatureVector& a,
-                                     const AnomalyFeatureVector& b)
-{
-    const double dLat  = a.lat      - b.lat;
-    const double dLon  = a.lon      - b.lon;
-    const double dT    = a.tDays    - b.tDays;
-    const double dH    = a.hourNorm - b.hourNorm;
-    return safeSqrt(dLat*dLat + dLon*dLon + dT*dT + dH*dH);
+    return std::min(dist / (2.0 * std::sqrt(static_cast<double>(NDIM))), 1.0);
 }
 
 double AnomalyDetector::localDensityRatio(const AnomalyFeatureVector& ev,
@@ -116,7 +146,7 @@ double AnomalyDetector::localDensityRatio(const AnomalyFeatureVector& ev,
     QVector<double> dists;
     dists.reserve(data.size());
     for (const auto& d : data) {
-        const double dist = euclidean4D(ev, d);
+        const double dist = featureDistance(ev, d);
         if (dist < 1e-12) continue;
         dists.append(dist);
     }

@@ -103,6 +103,9 @@ QVector<MOMatch> MOAnalyser::findSimilar(const QString& queryMO,
                                            int topK,
                                            double minSimilarity) const
 {
+    if (topK <= 0 || m_caseRecords.isEmpty())
+        return {};
+
     const QVector<double> queryVec = toTFIDF(queryMO);
     const QStringList queryTokens = queryMO.toLower().split(
         QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
@@ -125,8 +128,14 @@ QVector<MOMatch> MOAnalyser::findSimilar(const QString& queryMO,
     }
 
     std::sort(candidates.begin(), candidates.end(),
-              [](const Candidate& a, const Candidate& b) {
-                  return a.boostedScore > b.boostedScore;
+              [this](const Candidate& a, const Candidate& b) {
+                  if (a.boostedScore != b.boostedScore)
+                      return a.boostedScore > b.boostedScore;
+                  if (a.rawScore != b.rawScore)
+                      return a.rawScore > b.rawScore;
+                  // Identical scores: prefer resolved cases (boost is capped at 1.0).
+                  return m_caseRecords[a.idx].resolved &&
+                         !m_caseRecords[b.idx].resolved;
               });
 
     QVector<MOMatch> results;

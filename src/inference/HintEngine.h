@@ -37,7 +37,17 @@ private:
     QVector<InvestigativeLead> networkLeadsFromInput(
         const QVector<NetworkLead>& leads, int& rank) const;
 
-    void detectContradictions(QVector<InvestigativeLead>& leads) const;
+    struct ContradictionPair {
+        int     i = 0;
+        int     j = 0;
+        int     kind = 0;   // 0 = solo vs group, 1 = same-category delta
+        QString category;
+    };
+
+    QVector<ContradictionPair> findContradictionPairs(
+        const QVector<InvestigativeLead>& leads) const;
+    void applyContradictionMessages(QVector<InvestigativeLead>& leads,
+                                    const QVector<ContradictionPair>& pairs) const;
 
     double rankScore(const InvestigativeLead& lead,
                      double dataQuality) const;

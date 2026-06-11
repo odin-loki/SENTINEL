@@ -115,12 +115,16 @@ double GeographicProfiler::searchArea(const std::vector<std::vector<double>>& su
 
     std::sort(flat.begin(), flat.end(), std::greater<double>());
 
+    const double totalMass = std::accumulate(flat.begin(), flat.end(), 0.0);
+    if (totalMass <= 0.0) return 0.0;
+    const double target = threshold * totalMass;
+
     double cumSum = 0.0;
     int count = 0;
     for (double v : flat) {
         cumSum += v;
         ++count;
-        if (cumSum >= threshold) break;
+        if (cumSum >= target) break;
     }
     return count * cellAreaKm2;
 }

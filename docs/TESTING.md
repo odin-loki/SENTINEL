@@ -2,7 +2,7 @@
 
 ## Overview
 
-SENTINEL has **285 test targets** achieving comprehensive coverage across every pipeline layer. Tests use the Qt Test framework and run via CTest.
+SENTINEL has **297 test targets** achieving comprehensive coverage across every pipeline layer. Tests use the Qt Test framework and run via CTest.
 
 ---
 

@@ -12,6 +12,7 @@
 #include <QComboBox>
 #include <QDir>
 #include <QProcessEnvironment>
+#include <QSignalBlocker>
 
 namespace {
 
@@ -196,12 +197,7 @@ void SettingsWidget::setupUI()
         auto* hint = new QLabel("Used as the default map centre and UK Police API fetch area.", box);
         hint->setStyleSheet("color: #4a5568; font-size: 11px; padding-top: 4px;");
         hint->setWordWrap(true);
-        auto* boxLayout = qobject_cast<QVBoxLayout*>(box->layout());
-        if (!boxLayout) {
-            boxLayout = new QVBoxLayout();
-            boxLayout->addLayout(form);
-            box->setLayout(boxLayout);
-        }
+        form->addRow(hint);
         scrollLayout->addWidget(box);
     }
 
@@ -514,6 +510,17 @@ void SettingsWidget::setupUI()
 // ─────────────────────────────────────────────────────────────────────────────
 void SettingsWidget::loadFromConfig()
 {
+    // Block auto-save triggers while populating controls from config.
+    const QSignalBlocker blockTheme(m_themeCombo);
+    const QSignalBlocker blockMapZoom(m_mapZoomSpin);
+    const QSignalBlocker blockExport(m_exportDirEdit);
+    const QSignalBlocker blockMaxLeads(m_maxLeadCountSpin);
+    const QSignalBlocker blockAlertElevated(m_alertElevatedSpin);
+    const QSignalBlocker blockAlertHigh(m_alertHighSpin);
+    const QSignalBlocker blockAlertCritical(m_alertCriticalSpin);
+    const QSignalBlocker blockAutoRefresh(m_autoRefreshCheck);
+    const QSignalBlocker blockRefreshInterval(m_refreshIntervalSpin);
+
     m_openWeatherKeyEdit->setText(m_cfg.openWeatherKey);
     m_socrataTokenEdit->setText(m_cfg.socrataToken);
 
@@ -632,6 +639,14 @@ void SettingsWidget::onAutoSave()
 // ─────────────────────────────────────────────────────────────────────────────
 void SettingsWidget::onReset()
 {
+    if (headlessTestMode()) {
+        try {
+            m_cfg = AppConfig::load();
+        } catch (...) {}
+        loadFromConfig();
+        return;
+    }
+
     const auto reply = QMessageBox::question(this, "Reset Settings",
         "Reload settings from the last saved configuration?",
         QMessageBox::Yes | QMessageBox::Cancel);
@@ -672,6 +687,14 @@ void SettingsWidget::onBrowseExport()
 // ─────────────────────────────────────────────────────────────────────────────
 void SettingsWidget::onResetToDefaults()
 {
+    if (headlessTestMode()) {
+        m_cfg.resetToDefaults();
+        loadFromConfig();
+        try { m_cfg.save(); } catch (...) {}
+        emit settingsSaved(m_cfg);
+        return;
+    }
+
     const auto reply = QMessageBox::question(this, "Reset to Defaults",
         "Reset all settings to their factory defaults?\nThis will overwrite your current configuration.",
         QMessageBox::Yes | QMessageBox::Cancel);

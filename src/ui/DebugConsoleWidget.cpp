@@ -184,6 +184,9 @@ QString DebugConsoleWidget::formatEntry(const LogEntry& entry) const
 void DebugConsoleWidget::appendEntry(const LogEntry& entry)
 {
     m_entries.append(entry);
+    constexpr int kMaxCachedEntries = 5000;
+    if (m_entries.size() > kMaxCachedEntries)
+        m_entries.remove(0, m_entries.size() - kMaxCachedEntries);
 
     const int minSeverity  = m_levelFilter ? m_levelFilter->currentIndex() : 0;
     const QString catFilter = m_categoryFilter ? m_categoryFilter->text() : QString{};

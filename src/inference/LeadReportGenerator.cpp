@@ -1,6 +1,7 @@
 #include "inference/LeadReportGenerator.h"
 #include <QFile>
 #include <QTextStream>
+#include <QStringConverter>
 #include <algorithm>
 #include <cmath>
 
@@ -70,7 +71,9 @@ bool LeadReportGenerator::saveToFile(const LeadReport& report,
         return false;
 
     QTextStream out(&file);
+    out.setEncoding(QStringConverter::Utf8);
     out << (useMarkdown ? report.markdownText : report.plainText);
+    out.flush();
     return true;
 }
 
@@ -80,7 +83,7 @@ QString LeadReportGenerator::formatLead(const InvestigativeLead& lead)
     s += QStringLiteral("### #%1 — %2\n\n").arg(lead.rank).arg(lead.category);
     s += QStringLiteral("**%1**\n\n").arg(lead.headline);
     s += QStringLiteral("**Confidence:** %1%\n\n")
-             .arg(static_cast<int>(lead.confidence * 100.0));
+             .arg(static_cast<int>(std::round(lead.confidence * 100.0)));
     if (!lead.detail.isEmpty())
         s += QStringLiteral("%1\n\n").arg(lead.detail);
     if (!lead.provenance.empty()) {
@@ -116,7 +119,7 @@ QString LeadReportGenerator::generateHtml(const LeadReport& report)
            "<head>\n"
            "<meta charset=\"UTF-8\">\n"
            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-           "<title>SENTINEL Report \u2014 " << report.caseId << "</title>\n"
+           "<title>SENTINEL Report \u2014 " << report.caseId.toHtmlEscaped() << "</title>\n"
            "<style>\n"
            "  :root { --bg:#0d1117; --surface:#161b22; --accent:#e94560; "
            "          --text:#c9d1d9; --muted:#8b949e; --border:#30363d; }\n"
@@ -173,7 +176,7 @@ QString LeadReportGenerator::generateHtml(const LeadReport& report)
 
     for (const InvestigativeLead& lead : report.leads) {
         const int pct = static_cast<int>(std::round(lead.confidence * 100.0));
-        const bool isHigh = lead.confidence >= 0.8;
+        const bool isHigh = lead.confidence >= 0.7;
         const bool isMed  = lead.confidence >= 0.5 && !isHigh;
 
         QString badgeClass = isHigh ? QStringLiteral("badge-high")
