@@ -36,6 +36,10 @@ public:
     bool isFitted() const { return m_fitted; }
     const HawkesParams& params() const { return m_params; }
 
+    // Branching ratio n = ∫φ(t)dt.  For kernel α·β·exp(−βt), n = α.
+    // In the equivalent form λ(t)=μ+Σ α₀·exp(−β(t−tᵢ)), n = α₀/β with α₀ = α·β.
+    double branchingRatio() const { return m_params.alpha; }
+
     // ── Test / inspection helpers ─────────────────────────────────────────
     // Allow callers to directly set parameters (e.g. for unit testing the
     // kernel and intensity functions without running the optimizer).

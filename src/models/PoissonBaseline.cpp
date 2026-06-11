@@ -166,11 +166,12 @@ PoissonPrediction PoissonBaseline::predict(const QString& zoneId,
     int n = counts.size();
     double sum = 0.0;
     for (int c : counts) sum += c;
-    double mean = sum / n;
+    // λ = total count / exposure days (one observation per calendar day in bucket)
+    const double lambda = sum / static_cast<double>(n);
 
     pred.nObservations = n;
-    pred.lambda        = mean;
-    pred.expectedCount = mean;
+    pred.lambda        = lambda;
+    pred.expectedCount = lambda;
 
     auto nbIt = m_nbParams.constFind(bk);
     if (nbIt != m_nbParams.constEnd()) {
@@ -182,9 +183,9 @@ PoissonPrediction PoissonBaseline::predict(const QString& zoneId,
         pred.ci90 = { negBinPPF(r, p_nb, 0.05),
                       negBinPPF(r, p_nb, 0.95) };
     } else {
-        pred.probAtLeastOne = 1.0 - poissonPMF(mean, 0);
-        pred.ci90 = { poissonPPF(mean, 0.05),
-                      poissonPPF(mean, 0.95) };
+        pred.probAtLeastOne = 1.0 - poissonPMF(lambda, 0);
+        pred.ci90 = { poissonPPF(lambda, 0.05),
+                      poissonPPF(lambda, 0.95) };
     }
 
     return pred;

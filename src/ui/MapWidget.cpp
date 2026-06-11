@@ -34,6 +34,15 @@ MapWidget::MapWidget(QWidget* parent)
 void MapWidget::setEvents(const QVector<CrimeEvent>& events)
 {
     m_events = events;
+    for (CrimeEvent& ev : m_events) {
+        if (ev.lat.has_value() && ev.lon.has_value()) {
+            ev.latitude  = ev.lat.value();
+            ev.longitude = ev.lon.value();
+        } else if (ev.latitude != 0.0 || ev.longitude != 0.0) {
+            ev.lat = ev.latitude;
+            ev.lon = ev.longitude;
+        }
+    }
     update();
 }
 
@@ -366,11 +375,15 @@ void MapWidget::drawScale(QPainter& p)
 
     // Target scale bar: nearest nice km value for SCALE_WIDTH pixels
     double scaleKm = SCALE_WIDTH * kmPerPixel;
-    // Round to nearest nice number
+    // Round to nearest nice number (guard log10 for tiny scaleKm)
+    if (scaleKm <= 0.0)
+        scaleKm = kmPerPixel;
     const double rawExp  = std::floor(std::log10(scaleKm));
     const double factor  = std::pow(10.0, rawExp);
     scaleKm = std::round(scaleKm / factor) * factor;
-    const int scalePixels = static_cast<int>(scaleKm / kmPerPixel);
+    if (scaleKm <= 0.0)
+        scaleKm = factor;
+    const int scalePixels = std::max(1, static_cast<int>(scaleKm / kmPerPixel));
 
     const int x0 = 20;
     const int y0 = height() - 25;
@@ -437,7 +450,8 @@ void MapWidget::drawCompass(QPainter& p)
 void MapWidget::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton) {
-        m_dragging = true;
+        m_dragging  = true;
+        m_dragMoved = false;
         m_lastMousePos = event->pos();
         setCursor(Qt::ClosedHandCursor);
     }
@@ -445,12 +459,13 @@ void MapWidget::mousePressEvent(QMouseEvent* event)
 
 void MapWidget::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton && !m_dragging) {
+    if (event->button() == Qt::LeftButton && m_dragging && !m_dragMoved) {
         const auto [lat, lon] = pixelToLatLon(event->pos());
         emit locationClicked(lat, lon);
         emit regionClicked(lat, lon);
     }
-    m_dragging = false;
+    m_dragging  = false;
+    m_dragMoved = false;
     setCursor(Qt::CrossCursor);
 }
 
@@ -458,6 +473,8 @@ void MapWidget::mouseMoveEvent(QMouseEvent* event)
 {
     if (m_dragging) {
         const QPoint delta = event->pos() - m_lastMousePos;
+        if (!delta.isNull())
+            m_dragMoved = true;
         m_centerLon -= delta.x() * m_degPerPixel;
         m_centerLat += delta.y() * m_degPerPixel;
         m_lastMousePos = event->pos();
@@ -492,7 +509,7 @@ void MapWidget::wheelEvent(QWheelEvent* event)
     else
         m_degPerPixel /= ZOOM_FACTOR;       // zoom out
 
-    m_degPerPixel = std::clamp(m_degPerPixel, 1e-6, 2.0);
+    m_degPerPixel = std::clamp(m_degPerPixel, 1e-6, 1.0);
     updateZoomLabel();
     emit zoomChanged(zoomLevelInt());
     update();

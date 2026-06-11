@@ -241,13 +241,8 @@ SeriesMatch SeriesDetector::linkProbability(const SeriesEvent& newEvent,
     double minDtDays  = std::numeric_limits<double>::max();
 
     for (const auto& mem : series.members) {
-        double dlat = newEvent.lat - mem.lat;
-        double dlon = newEvent.lon - mem.lon;
-        // Approx metres: 1 degree lat ≈ 111 000 m; lon scale by cos(lat)
-        double cosLat   = std::cos((newEvent.lat + mem.lat) * 0.5 * SERIES_PI / 180.0);
-        double distM    = std::sqrt((dlat * 111000.0) * (dlat * 111000.0)
-                                  + (dlon * 111000.0 * cosLat) * (dlon * 111000.0 * cosLat));
-        double dtDays   = std::abs(newEvent.tDays - mem.tDays);
+        double distM  = haversineKm(newEvent.lat, newEvent.lon, mem.lat, mem.lon) * 1000.0;
+        double dtDays = std::abs(newEvent.tDays - mem.tDays);
         minDistM  = std::min(minDistM,  distM);
         minDtDays = std::min(minDtDays, dtDays);
     }
@@ -259,8 +254,9 @@ SeriesMatch SeriesDetector::linkProbability(const SeriesEvent& newEvent,
     double sSpatial  = std::max(0.0, 1.0 - minDistM  / nr.distM);
     double sTemporal = std::max(0.0, 1.0 - minDtDays / nr.days);
 
-    double composite = 0.35 * sSpatial + 0.35 * sTemporal + 0.30 * moSimilarity;
-    match.compositeScore = composite;
+    const double moClamped = std::clamp(moSimilarity, 0.0, 1.0);
+    double composite = 0.35 * sSpatial + 0.35 * sTemporal + 0.30 * moClamped;
+    match.compositeScore = std::clamp(composite, 0.0, 1.0);
 
     // Link probability with near-repeat risk multiplier
     constexpr double baseRate = 0.05;
@@ -333,7 +329,7 @@ double SeriesDetector::moJaccard(const QString& a, const QString& b)
     QSet<QString> setA(tokA.begin(), tokA.end());
     QSet<QString> setB(tokB.begin(), tokB.end());
 
-    if (setA.isEmpty() && setB.isEmpty()) return 1.0;
+    if (setA.isEmpty() || setB.isEmpty()) return 0.0;
 
     QSet<QString> intersection = setA & setB;
     QSet<QString> unionSet     = setA | setB;

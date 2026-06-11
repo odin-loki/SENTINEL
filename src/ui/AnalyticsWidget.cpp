@@ -168,6 +168,8 @@ void AnalyticsWidget::setupUI()
     // Connections
     connect(m_periodCombo, &QComboBox::currentIndexChanged, this, &AnalyticsWidget::onChartTypeChanged);
     connect(m_tabWidget,   &QTabWidget::currentChanged,     this, &AnalyticsWidget::onChartTypeChanged);
+
+    refresh();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -768,6 +770,8 @@ void AnalyticsWidget::runCalibration()
     reliabilitySeries->attachAxis(axisY);
     diagonalSeries->attachAxis(axisY);
 
+    if (m_calibView->chart())
+        m_calibView->chart()->deleteLater();
     m_calibView->setChart(chart);
 
     // ── Summary metrics ───────────────────────────────────────────────────────

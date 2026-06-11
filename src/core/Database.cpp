@@ -45,7 +45,10 @@ bool Database::open()
 
     // Enable WAL mode for better concurrent read/write performance
     QSqlQuery pragma(m_db);
-    pragma.exec(QStringLiteral("PRAGMA journal_mode=WAL"));
+    if (!pragma.exec(QStringLiteral("PRAGMA journal_mode=WAL"))) {
+        m_lastError = pragma.lastError().text();
+        qCWarning(lcDatabase) << "Failed to set WAL journal mode:" << m_lastError;
+    }
     pragma.exec(QStringLiteral("PRAGMA foreign_keys=ON"));
     pragma.exec(QStringLiteral("PRAGMA synchronous=NORMAL"));
     pragma.exec(QStringLiteral("PRAGMA cache_size=4000"));
@@ -183,6 +186,9 @@ int Database::currentSchemaVersion() const
 
 bool Database::migrateSchema(int fromVersion)
 {
+    if (fromVersion >= SCHEMA_VERSION)
+        return true;
+
     qCInfo(lcDatabase) << "Migrating schema from version" << fromVersion
                        << "to" << SCHEMA_VERSION;
 
@@ -686,8 +692,10 @@ CrimeEvent Database::rowToEvent(const QSqlQuery& q)
     const QVariant victV = q.value(QStringLiteral("victim_count"));
     if (!victV.isNull()) ev.victimCount = victV.toInt();
 
-    ev.meta         = strToJsonObj(q.value(QStringLiteral("meta")).toString());
-    ev.qualityScore = q.value(QStringLiteral("quality_score")).toDouble();
+    ev.meta = strToJsonObj(q.value(QStringLiteral("meta")).toString());
+
+    const QVariant qualityV = q.value(QStringLiteral("quality_score"));
+    ev.qualityScore = qualityV.isNull() ? 0.5 : qualityV.toDouble();
 
     // Populate flat UI convenience fields
     ev.id                  = ev.eventId;

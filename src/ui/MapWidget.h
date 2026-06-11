@@ -64,7 +64,8 @@ private:
     std::optional<GeographicProfile> m_riskProfile;
     QVector<HotspotRegion>           m_kdeHotspots;
     QPoint m_lastMousePos;
-    bool   m_dragging = false;
+    bool   m_dragging   = false;
+    bool   m_dragMoved  = false;
 
     QLabel* m_zoomLabel = nullptr;
 };

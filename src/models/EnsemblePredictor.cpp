@@ -4,6 +4,40 @@
 #include <cmath>
 #include <numeric>
 
+namespace {
+
+// Pool Adjacent Violators Algorithm — enforce non-decreasing calibrated values.
+void applyPava(QVector<double>& y)
+{
+    const int n = y.size();
+    if (n <= 1) return;
+
+    QVector<double> cal(n);
+    QVector<int>    idx(n);
+    int m = 0;
+
+    for (int i = 0; i < n; ++i) {
+        cal[m] = y[i];
+        idx[m] = 1;
+        while (m > 0 && cal[m - 1] > cal[m]) {
+            const double pooled = (cal[m - 1] * idx[m - 1] + cal[m] * idx[m]) /
+                                  static_cast<double>(idx[m - 1] + idx[m]);
+            --m;
+            cal[m] = pooled;
+            idx[m] += idx[m + 1];
+        }
+        ++m;
+    }
+
+    int pos = 0;
+    for (int b = 0; b < m; ++b) {
+        for (int j = 0; j < idx[b]; ++j)
+            y[pos++] = cal[b];
+    }
+}
+
+} // namespace
+
 // ─── Weights ──────────────────────────────────────────────────────────────────
 
 void EnsemblePredictor::setWeights(double wPoisson, double wHawkes)
@@ -37,15 +71,25 @@ void EnsemblePredictor::calibrate(
         bins[idx].n++;
     }
 
-    m_calTable.clear();
-    m_calTable.append({0.0, 0.0});
+    QVector<double> rawMeans;
+    QVector<double> calMeans;
+    rawMeans.reserve(NBINS);
+    calMeans.reserve(NBINS);
 
     for (int i = 0; i < NBINS; ++i) {
         if (bins[i].n == 0) continue;
-        const double rawMean = bins[i].sumPred / bins[i].n;
-        const double calMean = bins[i].sumAct  / bins[i].n;
-        m_calTable.append({rawMean, calMean});
+        rawMeans.append(bins[i].sumPred / bins[i].n);
+        calMeans.append(bins[i].sumAct  / bins[i].n);
     }
+
+    if (rawMeans.isEmpty()) return;
+
+    applyPava(calMeans);
+
+    m_calTable.clear();
+    m_calTable.append({0.0, 0.0});
+    for (int i = 0; i < rawMeans.size(); ++i)
+        m_calTable.append({rawMeans[i], std::clamp(calMeans[i], 0.0, 1.0)});
     m_calTable.append({1.0, 1.0});
     m_calibrated = true;
 }
@@ -178,14 +222,15 @@ QVector<QVector<EnsemblePrediction>> EnsemblePredictor::riskGrid(
     double lonMin, double lonMax,
     int gridN) const
 {
-    QVector<QVector<EnsemblePrediction>> grid(gridN,
-        QVector<EnsemblePrediction>(gridN));
+    const int n = std::max(gridN, 1);
+    QVector<QVector<EnsemblePrediction>> grid(n,
+        QVector<EnsemblePrediction>(n));
 
-    const double dLat = (latMax - latMin) / gridN;
-    const double dLon = (lonMax - lonMin) / gridN;
+    const double dLat = (latMax - latMin) / n;
+    const double dLon = (lonMax - lonMin) / n;
 
-    for (int r = 0; r < gridN; ++r) {
-        for (int c = 0; c < gridN; ++c) {
+    for (int r = 0; r < n; ++r) {
+        for (int c = 0; c < n; ++c) {
             const double lat = latMin + (r + 0.5) * dLat;
             const double lon = lonMin + (c + 0.5) * dLon;
             grid[r][c] = predict(QStringLiteral("grid_%1_%2").arg(r).arg(c),
@@ -200,7 +245,7 @@ QVector<QVector<EnsemblePrediction>> EnsemblePredictor::riskGrid(
 double EnsemblePredictor::ece(const QVector<QPair<double, double>>& predActual,
                                int bins)
 {
-    if (predActual.isEmpty()) return 0.0;
+    if (predActual.isEmpty() || bins <= 0) return 0.0;
 
     QVector<double> sumPred(bins, 0.0);
     QVector<double> sumAct(bins,  0.0);

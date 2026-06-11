@@ -1,5 +1,6 @@
 #include "ui/EventsTableWidget.h"
 
+#include <algorithm>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QHeaderView>
@@ -227,6 +228,13 @@ void EventsTableWidget::loadEvents()
 void EventsTableWidget::refresh()
 {
     onFilterChanged();
+}
+
+void EventsTableWidget::setEvents(const QVector<CrimeEvent>& events)
+{
+    m_events = events;
+    loadEvents();
+    m_detailPanel->clear();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

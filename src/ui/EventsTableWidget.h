@@ -18,6 +18,7 @@ class EventsTableWidget : public QWidget {
 public:
     EventsTableWidget(std::shared_ptr<Database> db, QWidget* parent = nullptr);
     void refresh();
+    void setEvents(const QVector<CrimeEvent>& events);
 
 signals:
     void eventSelected(const CrimeEvent& ev);
