@@ -1,4 +1,4 @@
-// test_risk_ensemble_deep.cpp — iteration-8 deep audit for RiskForecaster and EnsemblePredictor
+﻿// test_risk_ensemble_deep.cpp â€” iteration-8 deep audit for RiskForecaster and EnsemblePredictor
 #include <QTest>
 #include <QDateTime>
 #include <QTimeZone>
@@ -125,7 +125,7 @@ private:
 
 private slots:
 
-    // ── RiskForecaster (10 tests) ────────────────────────────────────────────
+    // â”€â”€ RiskForecaster (10 tests) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     void testWeeklyRiskIsMean()
     {
@@ -154,7 +154,7 @@ private slots:
         RiskForecaster rf;
         rf.setAlertThresholds(0.3, 0.5, 0.75);
         QCOMPARE(classifyAlert(0.10, 0.3, 0.5, 0.75), 0);
-        QCOMPARE(alertLabelFor(0), QStringLiteral("Normal"));
+        QCOMPARE(alertLabelFor(0), QStringLiteral("NORMAL"));
     }
 
     void testAlertLevelElevated()
@@ -162,7 +162,7 @@ private slots:
         RiskForecaster rf;
         rf.setAlertThresholds(0.3, 0.5, 0.75);
         QCOMPARE(classifyAlert(0.35, 0.3, 0.5, 0.75), 1);
-        QCOMPARE(alertLabelFor(1), QStringLiteral("Elevated"));
+        QCOMPARE(alertLabelFor(1), QStringLiteral("ELEVATED"));
     }
 
     void testAlertLevelHigh()
@@ -170,7 +170,7 @@ private slots:
         RiskForecaster rf;
         rf.setAlertThresholds(0.3, 0.5, 0.75);
         QCOMPARE(classifyAlert(0.55, 0.3, 0.5, 0.75), 2);
-        QCOMPARE(alertLabelFor(2), QStringLiteral("High"));
+        QCOMPARE(alertLabelFor(2), QStringLiteral("HIGH"));
     }
 
     void testAlertLevelCritical()
@@ -178,7 +178,7 @@ private slots:
         RiskForecaster rf;
         rf.setAlertThresholds(0.3, 0.5, 0.75);
         QCOMPARE(classifyAlert(0.80, 0.3, 0.5, 0.75), 3);
-        QCOMPARE(alertLabelFor(3), QStringLiteral("Critical"));
+        QCOMPARE(alertLabelFor(3), QStringLiteral("CRITICAL"));
     }
 
     void testForecastDayCount()
@@ -286,7 +286,7 @@ private slots:
                                 .arg(zfOld.days.first().riskScore)));
     }
 
-    // ── EnsemblePredictor (10 tests) ─────────────────────────────────────────
+    // â”€â”€ EnsemblePredictor (10 tests) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     void testWeightNormalization()
     {

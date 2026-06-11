@@ -207,6 +207,27 @@ QPair<QString, double> CrimeClassifier::classify(const QString& text) const
 }
 
 // ---------------------------------------------------------------------------
+// batchClassify()
+// ---------------------------------------------------------------------------
+QVector<QPair<QString, double>> CrimeClassifier::batchClassify(
+    const QVector<QString>& texts) const
+{
+    QVector<QPair<QString, double>> results;
+    results.reserve(texts.size());
+    for (const QString& text : texts)
+        results.append(classify(text));
+    return results;
+}
+
+// ---------------------------------------------------------------------------
+// corpusSize()
+// ---------------------------------------------------------------------------
+int CrimeClassifier::corpusSize() const
+{
+    return m_keywordMap.size();
+}
+
+// ---------------------------------------------------------------------------
 // severityScore()
 // ---------------------------------------------------------------------------
 double CrimeClassifier::severityScore(const QString& text, const QString& crimeType) const

@@ -12,6 +12,12 @@ public:
     // Returns (crimeType, confidence) pair
     QPair<QString, double> classify(const QString& text) const;
 
+    // Classify a batch of texts; results are in the same order as input
+    QVector<QPair<QString, double>> batchClassify(const QVector<QString>& texts) const;
+
+    // Number of distinct crime-type categories in the keyword corpus
+    int corpusSize() const;
+
     // Severity score 0.0–1.0 based on crime type + high-severity keywords
     double severityScore(const QString& text, const QString& crimeType) const;
 

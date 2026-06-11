@@ -54,7 +54,8 @@ void UKPoliceSource::fetchSince(const QDateTime& since)
 {
     qCInfo(lcIngest) << "Fetching UK Police data for" << m_lat << m_lon;
     m_pendingUrls.clear();
-    m_fetchCount = 0;
+    m_fetchCount       = 0;
+    m_inFlightRequests = 0;
 
     const QDate startDate = since.date();
     const QDate endDate   = QDate::currentDate();
@@ -85,16 +86,18 @@ void UKPoliceSource::processNextRequest()
     const QUrl url = m_pendingUrls.dequeue();
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("SENTINEL/1.0"));
+    ++m_inFlightRequests;
     m_nam->get(req);
 }
 
 void UKPoliceSource::onReplyFinished(QNetworkReply* reply)
 {
     reply->deleteLater();
+    if (m_inFlightRequests > 0) --m_inFlightRequests;
 
     if (reply->error() != QNetworkReply::NoError) {
         emit fetchError(reply->errorString());
-        if (m_pendingUrls.isEmpty()) {
+        if (m_pendingUrls.isEmpty() && m_inFlightRequests == 0) {
             m_rateLimitTimer->stop();
             emit fetchComplete(m_fetchCount);
         }
@@ -104,7 +107,7 @@ void UKPoliceSource::onReplyFinished(QNetworkReply* reply)
     const QByteArray body = reply->readAll();
     const QJsonDocument doc = QJsonDocument::fromJson(body);
     if (!doc.isArray()) {
-        if (m_pendingUrls.isEmpty()) {
+        if (m_pendingUrls.isEmpty() && m_inFlightRequests == 0) {
             m_rateLimitTimer->stop();
             emit fetchComplete(m_fetchCount);
         }
@@ -122,7 +125,7 @@ void UKPoliceSource::onReplyFinished(QNetworkReply* reply)
     const int done = m_totalRequests - static_cast<int>(m_pendingUrls.size());
     emit progress(done, m_totalRequests);
 
-    if (m_pendingUrls.isEmpty()) {
+    if (m_pendingUrls.isEmpty() && m_inFlightRequests == 0) {
         m_rateLimitTimer->stop();
         qCInfo(lcIngest) << "Fetched" << m_fetchCount << "events from UK Police API";
         emit fetchComplete(m_fetchCount);

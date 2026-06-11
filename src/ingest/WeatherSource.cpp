@@ -34,23 +34,13 @@ void WeatherSource::fetchHistorical(double lat, double lon,
     m_nam->get(req);
 }
 
-void WeatherSource::onReplyFinished(QNetworkReply* reply)
+int WeatherSource::parseResponse(const QByteArray& json)
 {
-    reply->deleteLater();
+    const QJsonDocument doc = QJsonDocument::fromJson(json);
+    if (!doc.isObject())
+        return -1;  // not a valid Open-Meteo JSON object
 
-    if (reply->error() != QNetworkReply::NoError) {
-        emit fetchError(reply->errorString());
-        return;
-    }
-
-    const QByteArray body = reply->readAll();
-    const QJsonDocument doc = QJsonDocument::fromJson(body);
-    if (!doc.isObject()) {
-        emit fetchError(QStringLiteral("Invalid JSON response from Open-Meteo"));
-        return;
-    }
-
-    const QJsonObject root = doc.object();
+    const QJsonObject root   = doc.object();
     const QJsonObject hourly = root.value(QStringLiteral("hourly")).toObject();
 
     const QJsonArray times      = hourly.value(QStringLiteral("time")).toArray();
@@ -63,10 +53,8 @@ void WeatherSource::onReplyFinished(QNetworkReply* reply)
 
     const int count = static_cast<int>(times.size());
 
-    // Resolve timezone offset from the response
-    QString tzName = root.value(QStringLiteral("timezone")).toString(QStringLiteral("UTC"));
-    // Open-Meteo returns times in local ISO8601 without offset; we store as-is keyed by local hour
-    // Use utc_offset_seconds to reconstruct QDateTime with correct offset
+    // Open-Meteo returns times in local ISO8601 without offset;
+    // use utc_offset_seconds to reconstruct UTC key.
     const int utcOffsetSec = root.value(QStringLiteral("utc_offset_seconds")).toInt(0);
 
     for (int i = 0; i < count; ++i) {
@@ -75,15 +63,15 @@ void WeatherSource::onReplyFinished(QNetworkReply* reply)
         QDateTime dt = QDateTime::fromString(timeStr, QStringLiteral("yyyy-MM-ddTHH:mm"));
         if (!dt.isValid()) continue;
         dt.setTimeZone(QTimeZone::utc());
-        dt = dt.addSecs(-utcOffsetSec); // convert to UTC
+        dt = dt.addSecs(-utcOffsetSec); // convert local to UTC
 
         WeatherData wd;
-        wd.temperatureC    = i < temps.size()      ? temps.at(i).toDouble()     : 0.0;
-        wd.precipitationMm = i < precip.size()     ? precip.at(i).toDouble()    : 0.0;
-        wd.windspeedKmh    = i < windspeed.size()  ? windspeed.at(i).toDouble() : 0.0;
-        wd.visibilityM     = i < visibility.size() ? visibility.at(i).toDouble(): 10000.0;
-        wd.isDay           = i < isDay.size()      ? (isDay.at(i).toInt() == 1) : true;
-        wd.weatherCode     = i < wcode.size()      ? wcode.at(i).toInt()        : 0;
+        wd.temperatureC    = i < temps.size()      ? temps.at(i).toDouble()      : 0.0;
+        wd.precipitationMm = i < precip.size()     ? precip.at(i).toDouble()     : 0.0;
+        wd.windspeedKmh    = i < windspeed.size()  ? windspeed.at(i).toDouble()  : 0.0;
+        wd.visibilityM     = i < visibility.size() ? visibility.at(i).toDouble() : 10000.0;
+        wd.isDay           = i < isDay.size()      ? (isDay.at(i).toInt() == 1)  : true;
+        wd.weatherCode     = i < wcode.size()      ? wcode.at(i).toInt()         : 0;
 
         wd.tempDiscomfort  = computeDiscomfort(wd.temperatureC);
         wd.isRaining       = (wd.precipitationMm > 0.1);
@@ -93,6 +81,27 @@ void WeatherSource::onReplyFinished(QNetworkReply* reply)
         // Key on the truncated UTC hour
         const QDateTime key = QDateTime(dt.date(), QTime(dt.time().hour(), 0, 0), QTimeZone::utc());
         m_cache.insert(key, wd);
+    }
+
+    // Mark as successfully parsed (even if 0 records — API responded correctly)
+    m_lastFetchedAt = QDateTime::currentDateTimeUtc();
+    return count;
+}
+
+void WeatherSource::onReplyFinished(QNetworkReply* reply)
+{
+    reply->deleteLater();
+
+    if (reply->error() != QNetworkReply::NoError) {
+        emit fetchError(reply->errorString());
+        return;
+    }
+
+    const QByteArray body = reply->readAll();
+    const int count = parseResponse(body);
+    if (count < 0) {
+        emit fetchError(QStringLiteral("Invalid JSON response from Open-Meteo"));
+        return;
     }
 
     emit fetchComplete(count);
@@ -118,5 +127,5 @@ double WeatherSource::computeDiscomfort(double tempC)
         return 0.5 + (tempC - 20.0) * 0.03;
     if (tempC < 40.0)
         return 0.8 + (tempC - 30.0) * 0.02;
-    return 0.6; // >= 40°C (extreme — back off)
+    return 1.0; // >= 40°C (extreme heat — maximum discomfort)
 }

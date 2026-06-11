@@ -89,11 +89,13 @@ double DataQualityScorer::completenessScore(const CrimeEvent& e) const
     if (e.occurredAt.has_value() && e.occurredAt->isValid())
         ++passed;
 
-    // 2. lat and lon both present and non-zero
+    // 2. lat and lon both present, non-zero, and within valid geographic range
     const auto lat = effectiveLat(e);
     const auto lon = effectiveLon(e);
     if (lat.has_value() && lon.has_value() &&
-        std::abs(*lat) > 1e-9 && std::abs(*lon) > 1e-9)
+        std::abs(*lat) > 1e-9 && std::abs(*lon) > 1e-9 &&
+        *lat >= -90.0 && *lat <= 90.0 &&
+        *lon >= -180.0 && *lon <= 180.0)
         ++passed;
 
     // 3. crimeType non-empty
@@ -156,6 +158,10 @@ QString DataQualityScorer::spatialPrecisionLabel(const CrimeEvent& e) const
     const double lon = *lonOpt;
 
     if (std::abs(lat) < 1e-9 && std::abs(lon) < 1e-9)
+        return QStringLiteral("unknown");
+
+    // Penalize out-of-range coordinates
+    if (lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0)
         return QStringLiteral("unknown");
 
     // Use minimum decimal places across lat and lon

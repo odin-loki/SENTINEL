@@ -1,4 +1,4 @@
-// test_risk_forecaster_deep2.cpp — Deep audit of RiskForecaster horizon,
+﻿// test_risk_forecaster_deep2.cpp — Deep audit of RiskForecaster horizon,
 // peakDayIndex, weeklyRisk, alertLevel, and alertLabel.
 #include <QTest>
 #include <QtMath>
@@ -130,7 +130,7 @@ private slots:
         const auto zf = rf.forecastZone(QStringLiteral("zone_cr"), base.addDays(61));
 
         if (zf.weeklyRisk <= 0.0)
-            QSKIP("weeklyRisk is zero — cannot exercise Critical threshold");
+            QSKIP("weeklyRisk is zero -- cannot exercise Critical threshold");
 
         QCOMPARE(zf.alertLevel, 3);
     }
@@ -138,4 +138,3 @@ private slots:
 
 QTEST_GUILESS_MAIN(TestRiskForecasterDeep2)
 #include "test_risk_forecaster_deep2.moc"
-

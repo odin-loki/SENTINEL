@@ -240,7 +240,7 @@ QVector<InvestigativeLead> HintEngine::networkLeadsFromInput(
 
 void HintEngine::detectContradictions(QVector<InvestigativeLead>& leads) const
 {
-    // Detect solo-vs-group contradictions from detail text
+    // Pass 1: detect solo-vs-group contradictions from detail text
     for (int i = 0; i < leads.size(); ++i) {
         const bool iSolo  = leads[i].detail.contains(QStringLiteral("solo"),  Qt::CaseInsensitive);
         const bool iGroup = leads[i].detail.contains(QStringLiteral("group"), Qt::CaseInsensitive);
@@ -256,6 +256,34 @@ void HintEngine::detectContradictions(QVector<InvestigativeLead>& leads) const
                 const QString msg2 = QStringLiteral("Contradicts lead rank %1 (solo vs group)")
                                          .arg(leads[i].rank);
                 leads[j].contradictions.push_back(msg2);
+            }
+        }
+    }
+
+    // Pass 2: detect same-category leads with a very large confidence divergence
+    // (> 0.5 delta). Two leads in the same investigative zone that strongly
+    // support contradictory conclusions should be flagged for analyst review.
+    {
+        QMap<QString, QVector<int>> catIdx;
+        for (int i = 0; i < leads.size(); ++i)
+            catIdx[leads[i].category].append(i);
+
+        for (auto it = catIdx.constBegin(); it != catIdx.constEnd(); ++it) {
+            const auto& idxs = it.value();
+            for (int a = 0; a < static_cast<int>(idxs.size()); ++a) {
+                for (int b = a + 1; b < static_cast<int>(idxs.size()); ++b) {
+                    const int i = idxs[a], j = idxs[b];
+                    if (std::abs(leads[i].confidence - leads[j].confidence) > 0.5) {
+                        leads[i].contradictions.push_back(
+                            QStringLiteral("Confidence conflict with lead rank %1 "
+                                           "(same category '%2', delta > 0.5)")
+                                .arg(leads[j].rank).arg(it.key()));
+                        leads[j].contradictions.push_back(
+                            QStringLiteral("Confidence conflict with lead rank %1 "
+                                           "(same category '%2', delta > 0.5)")
+                                .arg(leads[i].rank).arg(it.key()));
+                    }
+                }
             }
         }
     }

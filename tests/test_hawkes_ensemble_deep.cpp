@@ -1,4 +1,4 @@
-// test_hawkes_ensemble_deep.cpp — iteration-5 deep validation for HawkesProcess,
+﻿// test_hawkes_ensemble_deep.cpp â€” iteration-5 deep validation for HawkesProcess,
 // EnsemblePredictor, and RiskForecaster.
 #include <QTest>
 #include <QDateTime>
@@ -104,7 +104,7 @@ private:
 
 private slots:
 
-    // ── HawkesProcess ────────────────────────────────────────────────────────
+    // â”€â”€ HawkesProcess â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     void testHawkesNLLWithSingleEvent()
     {
@@ -219,7 +219,7 @@ private slots:
         QVERIFY(lam > 0.0);
     }
 
-    // ── EnsemblePredictor ────────────────────────────────────────────────────
+    // â”€â”€ EnsemblePredictor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     void testEnsemblePoissonOnlyDominant()
     {
@@ -303,7 +303,7 @@ private slots:
         QCOMPARE(ep.applyCalibration(1.0), 1.0);
     }
 
-    // ── RiskForecaster ───────────────────────────────────────────────────────
+    // â”€â”€ RiskForecaster â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     void testRiskForecasterGenerates7Days()
     {

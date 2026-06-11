@@ -1,7 +1,7 @@
-# SENTINEL — Crime Analytics & Predictive Threat Assessment System
+﻿# SENTINEL â€” Crime Analytics & Predictive Threat Assessment System
 
 <p align="center">
-  <strong>C++23 · Qt 6 · SQLite · 240 passing tests</strong>
+  <strong>C++23 Â· Qt 6 Â· SQLite Â· 251 passing tests</strong>
 </p>
 
 > A fully auditable, standalone desktop application for spatiotemporal crime prediction, investigative lead generation, and anomaly detection. Every prediction is traceable to its data source, mathematical model, and quantified uncertainty. No proprietary APIs. No black-box AI.
@@ -33,7 +33,7 @@ SENTINEL ingests heterogeneous public crime data streams, applies a layered prob
 - **Geographic offender profiles** (Rossmo CGT formula)
 - **Near-repeat victimisation** alerts with decay modelling
 - **Anomaly signals** with uncertainty decomposition
-- **Full provenance tracing** — every output is linked to its source data and computation chain
+- **Full provenance tracing** â€” every output is linked to its source data and computation chain
 
 ---
 
@@ -42,8 +42,8 @@ SENTINEL ingests heterogeneous public crime data streams, applies a layered prob
 ### Data Ingestion
 | Component | Description |
 |---|---|
-| `UKPoliceSource` | UK Police Open Data API (`data.police.uk`) — 43 force areas, real-time + historical |
-| `WeatherSource` | Open-Meteo free weather API — historical hourly data for weather-crime correlation |
+| `UKPoliceSource` | UK Police Open Data API (`data.police.uk`) â€” 43 force areas, real-time + historical |
+| `WeatherSource` | Open-Meteo free weather API â€” historical hourly data for weather-crime correlation |
 | `CsvImporter` | Auto-column detection for Chicago PD, NYC NYPD, LA LAPD, ABS Australian data formats |
 | `DataQualityScorer` | Composite quality scoring (completeness, temporal/spatial precision, source reliability) |
 
@@ -51,7 +51,7 @@ SENTINEL ingests heterogeneous public crime data streams, applies a layered prob
 | Component | Description |
 |---|---|
 | `MOExtractor` | Regex-based Modus Operandi extraction: entry method, target type, time of day, weapons, items taken, solo/group |
-| `CrimeClassifier` | Weighted keyword TF-IDF classifier — 13 crime categories, severity scoring, sentiment analysis, threat detection |
+| `CrimeClassifier` | Weighted keyword TF-IDF classifier â€” 13 crime categories, severity scoring, sentiment analysis, threat detection |
 
 ### Statistical Models
 | Model | Method |
@@ -93,7 +93,7 @@ SENTINEL ingests heterogeneous public crime data streams, applies a layered prob
 | `EventsTableWidget` | Filterable crime event browser with quality badges and detail panel |
 | `LeadsWidget` | Ranked investigative leads with interactive evidence scorer, series table |
 | `AnalyticsWidget` | Qt Charts: hourly patterns, crime type pie, temporal trend, calibration curve |
-| `TemporalHeatmapWidget` | Weekday × hour crime density heatmap |
+| `TemporalHeatmapWidget` | Weekday Ã— hour crime density heatmap |
 | `AuditLogWidget` | Filterable provenance chain viewer per event |
 | `DebugConsoleWidget` | Real-time log viewer with level and category filtering |
 | `SettingsWidget` | API keys, model parameters, alert thresholds, GP hyperparameters |
@@ -103,43 +103,43 @@ SENTINEL ingests heterogeneous public crime data streams, applies a layered prob
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                        SENTINEL PIPELINE                         │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌─────────────┐   ┌──────────────┐   ┌───────────────────────┐ │
-│  │  INGEST     │   │  NLP         │   │  FEATURE ENGINEERING  │ │
-│  │             │──▶│              │──▶│                       │ │
-│  │ UKPolice    │   │ MOExtractor  │   │ TemporalFeatures      │ │
-│  │ Weather     │   │ CrimeClass.  │   │ DataQualityScorer     │ │
-│  │ CsvImporter │   │              │   │                       │ │
-│  └─────────────┘   └──────────────┘   └───────────────────────┘ │
-│          │                                         │             │
-│          ▼                                         ▼             │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                   MODEL STACK                            │   │
-│  │  PoissonBaseline  │  HawkesProcess  │  SeriesDetector   │   │
-│  │  KDEHotspot       │  GPRegression   │  BayesianHier.    │   │
-│  │  RiskForecaster   │  EnsemblePredictor │ NearRepeatVict.│   │
-│  └──────────────────────────────────────────────────────────┘   │
-│          │                                                        │
-│          ▼                                                        │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                   INFERENCE ENGINE                       │   │
-│  │  GeographicProfiler │ MOAnalyser   │ EvidenceScorer     │   │
-│  │  AnomalyDetector    │ CoOffending. │ HintEngine         │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│          │                                                        │
-│          ▼                                                        │
-│  ┌─────────────┐   ┌────────────────┐   ┌──────────────────┐   │
-│  │  DATABASE   │   │  BENCHMARKING  │   │  UI LAYER        │   │
-│  │  SQLite     │   │  BenchMetrics  │   │  Dashboard       │   │
-│  │  Provenance │   │  BiasAuditor   │   │  Map / Events    │   │
-│  │  Audit Log  │   │  Calibration   │   │  Leads / Audit   │   │
-│  └─────────────┘   └────────────────┘   └──────────────────┘   │
-│                                                                  │
-│  ProvenanceLog traces every event through the entire pipeline    │
-└──────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                        SENTINEL PIPELINE                         â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                                  â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
+â”‚  â”‚  INGEST     â”‚   â”‚  NLP         â”‚   â”‚  FEATURE ENGINEERING  â”‚ â”‚
+â”‚  â”‚             â”‚â”€â”€â–¶â”‚              â”‚â”€â”€â–¶â”‚                       â”‚ â”‚
+â”‚  â”‚ UKPolice    â”‚   â”‚ MOExtractor  â”‚   â”‚ TemporalFeatures      â”‚ â”‚
+â”‚  â”‚ Weather     â”‚   â”‚ CrimeClass.  â”‚   â”‚ DataQualityScorer     â”‚ â”‚
+â”‚  â”‚ CsvImporter â”‚   â”‚              â”‚   â”‚                       â”‚ â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
+â”‚          â”‚                                         â”‚             â”‚
+â”‚          â–¼                                         â–¼             â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚  â”‚                   MODEL STACK                            â”‚   â”‚
+â”‚  â”‚  PoissonBaseline  â”‚  HawkesProcess  â”‚  SeriesDetector   â”‚   â”‚
+â”‚  â”‚  KDEHotspot       â”‚  GPRegression   â”‚  BayesianHier.    â”‚   â”‚
+â”‚  â”‚  RiskForecaster   â”‚  EnsemblePredictor â”‚ NearRepeatVict.â”‚   â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â”‚          â”‚                                                        â”‚
+â”‚          â–¼                                                        â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚  â”‚                   INFERENCE ENGINE                       â”‚   â”‚
+â”‚  â”‚  GeographicProfiler â”‚ MOAnalyser   â”‚ EvidenceScorer     â”‚   â”‚
+â”‚  â”‚  AnomalyDetector    â”‚ CoOffending. â”‚ HintEngine         â”‚   â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â”‚          â”‚                                                        â”‚
+â”‚          â–¼                                                        â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚  â”‚  DATABASE   â”‚   â”‚  BENCHMARKING  â”‚   â”‚  UI LAYER        â”‚   â”‚
+â”‚  â”‚  SQLite     â”‚   â”‚  BenchMetrics  â”‚   â”‚  Dashboard       â”‚   â”‚
+â”‚  â”‚  Provenance â”‚   â”‚  BiasAuditor   â”‚   â”‚  Map / Events    â”‚   â”‚
+â”‚  â”‚  Audit Log  â”‚   â”‚  Calibration   â”‚   â”‚  Leads / Audit   â”‚   â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â”‚                                                                  â”‚
+â”‚  ProvenanceLog traces every event through the entire pipeline    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ---
@@ -150,24 +150,24 @@ SENTINEL ingests heterogeneous public crime data streams, applies a layered prob
 Non-homogeneous Poisson process with temporal bucket keys `zone|hour|dow|month|crimeType`. Overdispersed zones automatically switch to Negative Binomial parameterisation. Provides PMF, PPF, 90% credible intervals.
 
 ### Hawkes Self-Exciting Process
-Conditional intensity: `λ(t,x) = μ + Σᵢ α·exp(-β(t-tᵢ))·G(x-xᵢ,σ)` where G is a 2D spatial Gaussian kernel. Fitted via maximum likelihood. Models near-repeat victimisation contagion.
+Conditional intensity: `Î»(t,x) = Î¼ + Î£áµ¢ Î±Â·exp(-Î²(t-táµ¢))Â·G(x-xáµ¢,Ïƒ)` where G is a 2D spatial Gaussian kernel. Fitted via maximum likelihood. Models near-repeat victimisation contagion.
 
 ### Spatiotemporal DBSCAN (Series Detector)
 Normalises spatial (km), temporal (days) and MO similarity into a 3D feature space. Applies DBSCAN with calibrated crime-type-specific epsilon values from published near-repeat research.
 
 ### Rossmo CGT Geographic Profile
-For distance `d` from grid point to crime site `cᵢ`, with buffer radius `B`:
-- `d ≤ B`: `B^(g−f) / (2B − d)^g` (buffer zone — suppresses anchor near crime sites)
+For distance `d` from grid point to crime site `cáµ¢`, with buffer radius `B`:
+- `d â‰¤ B`: `B^(gâˆ’f) / (2B âˆ’ d)^g` (buffer zone â€” suppresses anchor near crime sites)
 - `B < d < 4B`: `1 / d^f` (distance decay)
-- `d ≥ 4B`: negligible
+- `d â‰¥ 4B`: negligible
 
 Surface is summed over all crime sites, normalised; 50%/80% search areas computed by thresholding.
 
 ### Bayesian Hierarchical Model
-Gamma-Poisson conjugacy: `λ_z | data ~ Gamma(α₀+k, β₀+E)`. Hyperparameters α₀, β₀ estimated via empirical Bayes method of moments across zones.
+Gamma-Poisson conjugacy: `Î»_z | data ~ Gamma(Î±â‚€+k, Î²â‚€+E)`. Hyperparameters Î±â‚€, Î²â‚€ estimated via empirical Bayes method of moments across zones.
 
 ### GP Regression
-Squared-exponential kernel, Cholesky decomposition `K = LLᵀ`, posterior mean `μ* = K*ᵀ α`, posterior variance `σ*² = K** - K*ᵀ (K+σₙ²I)⁻¹ K*`. Log marginal likelihood for model comparison.
+Squared-exponential kernel, Cholesky decomposition `K = LLáµ€`, posterior mean `Î¼* = K*áµ€ Î±`, posterior variance `Ïƒ*Â² = K** - K*áµ€ (K+Ïƒâ‚™Â²I)â»Â¹ K*`. Log marginal likelihood for model comparison.
 
 ### Calibration Analysis
 ECE (expected calibration error, Guo et al. 2017), MCE (maximum calibration error), ACE (unweighted average), PAVA-based isotonic regression recalibration.
@@ -188,69 +188,69 @@ ECE (expected calibration error, Guo et al. 2017), MCE (maximum calibration erro
 
 ```
 sentinel/
-├── CMakeLists.txt              # Build configuration
-├── README.md
-├── .gitignore
-├── resources/
-│   ├── icons/                  # Application icons
-│   ├── styles/dark.qss         # Dark theme stylesheet
-│   └── sentinel.qrc            # Qt resource file
-├── src/
-│   ├── main.cpp
-│   ├── core/
-│   │   ├── CrimeEvent.h        # All shared data structures
-│   │   ├── AppConfig.h         # Runtime configuration + QSettings persistence
-│   │   ├── Database.h/cpp      # SQLite persistence, schema versioning
-│   │   ├── SentinelLogger.h/cpp # Qt log handler + ring buffer
-│   │   └── DataExporter.h/cpp  # Markdown/JSON/CSV/HTML export
-│   ├── audit/
-│   │   └── ProvenanceLog.h/cpp # Event provenance chain recording
-│   ├── ingest/
-│   │   ├── DataSource.h        # Abstract async data source base
-│   │   ├── UKPoliceSource.h/cpp # UK Police Open Data API client
-│   │   ├── WeatherSource.h/cpp  # Open-Meteo weather API client
-│   │   ├── CsvImporter.h/cpp   # Auto-column CSV import
-│   │   └── DataQualityScorer.h/cpp # Quality scoring
-│   ├── nlp/
-│   │   ├── MOExtractor.h/cpp   # Modus operandi feature extraction
-│   │   └── CrimeClassifier.h/cpp # Crime type classification + sentiment
-│   ├── models/
-│   │   ├── TemporalFeatures.h/cpp # Cyclical temporal feature engineering
-│   │   ├── PoissonBaseline.h/cpp  # Poisson/NegBin baseline model
-│   │   ├── HawkesProcess.h/cpp    # Self-exciting process
-│   │   ├── SeriesDetector.h/cpp   # DBSCAN crime series detection
-│   │   ├── KDEHotspot.h/cpp       # Kernel density hotspot estimation
-│   │   ├── GPRegression.h/cpp     # Gaussian Process regression
-│   │   ├── BayesianHierarchical.h/cpp # Gamma-Poisson hierarchical model
-│   │   ├── RiskForecaster.h/cpp   # Multi-day zone risk forecasting
-│   │   ├── EnsemblePredictor.h/cpp # Weighted ensemble + calibration
-│   │   └── NearRepeatVictimisation.h/cpp # Knox test + near-repeat alerts
-│   ├── inference/
-│   │   ├── GeographicProfiler.h/cpp # Rossmo CGT surface
-│   │   ├── MOAnalyser.h/cpp       # TF-IDF cosine MO similarity
-│   │   ├── EvidenceScorer.h/cpp   # Bayesian likelihood ratio evidence
-│   │   ├── AnomalyDetector.h/cpp  # Isolation + z-score anomaly detection
-│   │   ├── CoOffendingAnalyser.h/cpp # PageRank + betweenness co-offender network
-│   │   ├── HintEngine.h/cpp       # Lead generation + ranking + contradiction
-│   │   └── LeadReportGenerator.h/cpp # Markdown/HTML lead reports
-│   ├── benchmark/
-│   │   ├── BenchmarkMetrics.h/cpp # PAI, PEI, SER, AUC, MAE, RMSE, Brier, MRR
-│   │   ├── BiasAuditor.h/cpp      # Fairness metrics and bias detection
-│   │   └── CalibrationAnalyser.h/cpp # ECE, MCE, ACE, isotonic calibration
-│   └── ui/
-│       ├── MainWindow.h/cpp
-│       ├── DashboardWidget.h/cpp
-│       ├── MapWidget.h/cpp
-│       ├── EventsTableWidget.h/cpp
-│       ├── LeadsWidget.h/cpp
-│       ├── AnalyticsWidget.h/cpp
-│       ├── TemporalHeatmapWidget.h/cpp
-│       ├── AuditLogWidget.h/cpp
-│       ├── DebugConsoleWidget.h/cpp
-│       └── SettingsWidget.h/cpp
-└── tests/
-    ├── CMakeLists.txt          # 196 test targets
-    └── test_*.cpp              # Unit, integration, stress, and UI tests
+â”œâ”€â”€ CMakeLists.txt              # Build configuration
+â”œâ”€â”€ README.md
+â”œâ”€â”€ .gitignore
+â”œâ”€â”€ resources/
+â”‚   â”œâ”€â”€ icons/                  # Application icons
+â”‚   â”œâ”€â”€ styles/dark.qss         # Dark theme stylesheet
+â”‚   â””â”€â”€ sentinel.qrc            # Qt resource file
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ main.cpp
+â”‚   â”œâ”€â”€ core/
+â”‚   â”‚   â”œâ”€â”€ CrimeEvent.h        # All shared data structures
+â”‚   â”‚   â”œâ”€â”€ AppConfig.h         # Runtime configuration + QSettings persistence
+â”‚   â”‚   â”œâ”€â”€ Database.h/cpp      # SQLite persistence, schema versioning
+â”‚   â”‚   â”œâ”€â”€ SentinelLogger.h/cpp # Qt log handler + ring buffer
+â”‚   â”‚   â””â”€â”€ DataExporter.h/cpp  # Markdown/JSON/CSV/HTML export
+â”‚   â”œâ”€â”€ audit/
+â”‚   â”‚   â””â”€â”€ ProvenanceLog.h/cpp # Event provenance chain recording
+â”‚   â”œâ”€â”€ ingest/
+â”‚   â”‚   â”œâ”€â”€ DataSource.h        # Abstract async data source base
+â”‚   â”‚   â”œâ”€â”€ UKPoliceSource.h/cpp # UK Police Open Data API client
+â”‚   â”‚   â”œâ”€â”€ WeatherSource.h/cpp  # Open-Meteo weather API client
+â”‚   â”‚   â”œâ”€â”€ CsvImporter.h/cpp   # Auto-column CSV import
+â”‚   â”‚   â””â”€â”€ DataQualityScorer.h/cpp # Quality scoring
+â”‚   â”œâ”€â”€ nlp/
+â”‚   â”‚   â”œâ”€â”€ MOExtractor.h/cpp   # Modus operandi feature extraction
+â”‚   â”‚   â””â”€â”€ CrimeClassifier.h/cpp # Crime type classification + sentiment
+â”‚   â”œâ”€â”€ models/
+â”‚   â”‚   â”œâ”€â”€ TemporalFeatures.h/cpp # Cyclical temporal feature engineering
+â”‚   â”‚   â”œâ”€â”€ PoissonBaseline.h/cpp  # Poisson/NegBin baseline model
+â”‚   â”‚   â”œâ”€â”€ HawkesProcess.h/cpp    # Self-exciting process
+â”‚   â”‚   â”œâ”€â”€ SeriesDetector.h/cpp   # DBSCAN crime series detection
+â”‚   â”‚   â”œâ”€â”€ KDEHotspot.h/cpp       # Kernel density hotspot estimation
+â”‚   â”‚   â”œâ”€â”€ GPRegression.h/cpp     # Gaussian Process regression
+â”‚   â”‚   â”œâ”€â”€ BayesianHierarchical.h/cpp # Gamma-Poisson hierarchical model
+â”‚   â”‚   â”œâ”€â”€ RiskForecaster.h/cpp   # Multi-day zone risk forecasting
+â”‚   â”‚   â”œâ”€â”€ EnsemblePredictor.h/cpp # Weighted ensemble + calibration
+â”‚   â”‚   â””â”€â”€ NearRepeatVictimisation.h/cpp # Knox test + near-repeat alerts
+â”‚   â”œâ”€â”€ inference/
+â”‚   â”‚   â”œâ”€â”€ GeographicProfiler.h/cpp # Rossmo CGT surface
+â”‚   â”‚   â”œâ”€â”€ MOAnalyser.h/cpp       # TF-IDF cosine MO similarity
+â”‚   â”‚   â”œâ”€â”€ EvidenceScorer.h/cpp   # Bayesian likelihood ratio evidence
+â”‚   â”‚   â”œâ”€â”€ AnomalyDetector.h/cpp  # Isolation + z-score anomaly detection
+â”‚   â”‚   â”œâ”€â”€ CoOffendingAnalyser.h/cpp # PageRank + betweenness co-offender network
+â”‚   â”‚   â”œâ”€â”€ HintEngine.h/cpp       # Lead generation + ranking + contradiction
+â”‚   â”‚   â””â”€â”€ LeadReportGenerator.h/cpp # Markdown/HTML lead reports
+â”‚   â”œâ”€â”€ benchmark/
+â”‚   â”‚   â”œâ”€â”€ BenchmarkMetrics.h/cpp # PAI, PEI, SER, AUC, MAE, RMSE, Brier, MRR
+â”‚   â”‚   â”œâ”€â”€ BiasAuditor.h/cpp      # Fairness metrics and bias detection
+â”‚   â”‚   â””â”€â”€ CalibrationAnalyser.h/cpp # ECE, MCE, ACE, isotonic calibration
+â”‚   â””â”€â”€ ui/
+â”‚       â”œâ”€â”€ MainWindow.h/cpp
+â”‚       â”œâ”€â”€ DashboardWidget.h/cpp
+â”‚       â”œâ”€â”€ MapWidget.h/cpp
+â”‚       â”œâ”€â”€ EventsTableWidget.h/cpp
+â”‚       â”œâ”€â”€ LeadsWidget.h/cpp
+â”‚       â”œâ”€â”€ AnalyticsWidget.h/cpp
+â”‚       â”œâ”€â”€ TemporalHeatmapWidget.h/cpp
+â”‚       â”œâ”€â”€ AuditLogWidget.h/cpp
+â”‚       â”œâ”€â”€ DebugConsoleWidget.h/cpp
+â”‚       â””â”€â”€ SettingsWidget.h/cpp
+â””â”€â”€ tests/
+    â”œâ”€â”€ CMakeLists.txt          # 251 test targets
+    â””â”€â”€ test_*.cpp              # Unit, integration, stress, and UI tests
 ```
 
 ---
@@ -266,7 +266,7 @@ sentinel/
 | C++ Compiler | C++23: MSVC 2022, GCC 13+, or Clang 16+ |
 | Ninja (optional) | Fastest build on Windows |
 
-### Windows — MinGW (Recommended)
+### Windows â€” MinGW (Recommended)
 
 ```bash
 cd sentinel
@@ -274,7 +274,7 @@ cmake -B build -G Ninja -DCMAKE_PREFIX_PATH="C:/Qt/6.11.0/mingw_64"
 cmake --build build
 ```
 
-### Windows — MSVC
+### Windows â€” MSVC
 
 ```bash
 cmake -B build -DCMAKE_PREFIX_PATH="C:/Qt/6.11.0/msvc2022_64"
@@ -302,7 +302,7 @@ cmake --build build -j$(nproc)
 
 ## Testing
 
-SENTINEL has **196 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
+SENTINEL has **251 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
 
 ```bash
 # Run all tests (parallel, 4 jobs)
@@ -375,7 +375,7 @@ theme=dark
 ## Design Principles
 
 ### 1. Auditability First
-Every output — prediction, lead, anomaly signal — carries a full provenance chain: data source → ingest time → model → parameters → output. The `ProvenanceLog` records every stage for every event.
+Every output â€” prediction, lead, anomaly signal â€” carries a full provenance chain: data source â†’ ingest time â†’ model â†’ parameters â†’ output. The `ProvenanceLog` records every stage for every event.
 
 ### 2. Uncertainty as a First-Class Output
 No point estimates without confidence intervals. All probabilistic outputs include:
@@ -398,13 +398,13 @@ All pipelines are deterministic given the same input data and configuration. No 
 
 | Method | Reference |
 |---|---|
-| Hawkes self-exciting process | Mohler et al. (2011). *Self-exciting point process modeling of crime.* JASA 106(493):100–108 |
-| Near-repeat victimisation | Sherman et al. (1989). *Hot spots of predatory crime.* Criminology 27(1):27–56 |
-| Near-repeat space-time risk | Johnson et al. (2007). *Space-time patterns of risk.* British Journal of Criminology 47(3):363–383 |
+| Hawkes self-exciting process | Mohler et al. (2011). *Self-exciting point process modeling of crime.* JASA 106(493):100â€“108 |
+| Near-repeat victimisation | Sherman et al. (1989). *Hot spots of predatory crime.* Criminology 27(1):27â€“56 |
+| Near-repeat space-time risk | Johnson et al. (2007). *Space-time patterns of risk.* British Journal of Criminology 47(3):363â€“383 |
 | Geographic profiling (Rossmo CGT) | Rossmo, D.K. (2000). *Geographic Profiling.* CRC Press |
 | Bayesian evidence weighting | Taroni et al. (2014). *Bayesian Networks for Probabilistic Inference and Decision Analysis in Forensic Science.* Wiley |
 | Co-offending networks (PageRank) | Page et al. (1999). *The PageRank Citation Ranking.* Stanford Tech Report |
-| Betweenness centrality | Brandes (2001). *A faster algorithm for betweenness centrality.* Journal of Mathematical Sociology 25(2):163–177 |
+| Betweenness centrality | Brandes (2001). *A faster algorithm for betweenness centrality.* Journal of Mathematical Sociology 25(2):163â€“177 |
 | Hierarchical Bayesian crime rates | Gelman & Hill (2007). *Data Analysis Using Regression and Multilevel/Hierarchical Models.* Cambridge |
 | KDE spatial hotspots | Chainey & Ratcliffe (2005). *GIS and Crime Mapping.* Wiley |
 | Calibration (ECE) | Guo et al. (2017). *On calibration of modern neural networks.* ICML |
@@ -427,5 +427,5 @@ All pipelines are deterministic given the same input data and configuration. No 
 
 ---
 
-*Author: Odin Loch · Version 1.0.0 · C++23 Qt6 implementation of the SENTINEL design specification*
+*Author: Odin Loch Â· Version 1.0.0 Â· C++23 Qt6 implementation of the SENTINEL design specification*
 

@@ -41,8 +41,9 @@ private:
     QTimer* m_rateLimitTimer;
     double m_lat, m_lon, m_radiusKm;
     QQueue<QUrl> m_pendingUrls;
-    int m_fetchCount = 0;
-    int m_totalRequests = 0;
+    int m_fetchCount      = 0;
+    int m_totalRequests   = 0;
+    int m_inFlightRequests = 0;  // requests sent but not yet replied to
 
     static const QString BASE_URL;
     static const QMap<QString, QString> CRIME_TYPE_MAP;

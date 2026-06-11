@@ -65,11 +65,13 @@ std::vector<std::vector<double>> KDEHotspot::compute(
     const double hLat = silvermanBandwidth(lats, m_bwMultiplier);
     const double hLon = silvermanBandwidth(lons, m_bwMultiplier);
 
-    const double safeHLat = std::max(hLat, 1e-6);
-    const double safeHLon = std::max(hLon, 1e-6);
-
     const double dLat = (latMax - latMin) / N;
     const double dLon = (lonMax - lonMin) / N;
+
+    // Clamp bandwidth to at least half a grid cell so that co-located or
+    // near-identical events still produce a visible peak in the surface.
+    const double safeHLat = std::max(hLat, dLat * 0.5);
+    const double safeHLon = std::max(hLon, dLon * 0.5);
 
     // Evaluate KDE at each grid cell
     for (int r = 0; r < N; ++r) {
