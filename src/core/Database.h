@@ -95,6 +95,7 @@ public:
     // ── Schema versioning ─────────────────────────────────────────────────────
     static constexpr int SCHEMA_VERSION = 3;
     int currentSchemaVersion() const;
+    int getSchemaVersion() const { return currentSchemaVersion(); }
     bool migrateSchema(int fromVersion);
 
 private:

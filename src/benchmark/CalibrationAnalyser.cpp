@@ -28,8 +28,8 @@ CalibrationResult CalibrationAnalyser::analyse(
     QVector<int>    cnt    (m_nBins, 0);
 
     for (const auto& [pred, act] : predActual) {
-        const int b = std::min(
-            static_cast<int>(pred * m_nBins), m_nBins - 1);
+        const int b = std::clamp(
+            static_cast<int>(pred * m_nBins), 0, m_nBins - 1);
         sumPred[b] += pred;
         sumAct [b] += act;
         cnt    [b]++;

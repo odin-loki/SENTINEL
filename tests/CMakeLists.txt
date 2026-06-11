@@ -246,6 +246,9 @@ set_tests_properties(test_mo_extractor_deep PROPERTIES TIMEOUT 30)
 sentinel_test(test_near_repeat_victimisation              test_near_repeat_victimisation.cpp)
 set_tests_properties(test_near_repeat_victimisation PROPERTIES TIMEOUT 30)
 
+sentinel_test(series_near_repeat test_series_near_repeat.cpp)
+set_tests_properties(series_near_repeat PROPERTIES TIMEOUT 30)
+
 sentinel_test(test_bias_auditor_advanced                  test_bias_auditor_advanced.cpp)
 set_tests_properties(test_bias_auditor_advanced PROPERTIES TIMEOUT 30)
 
@@ -498,6 +501,9 @@ sentinel_test(test_forecaster_accuracy       test_forecaster_accuracy.cpp)
 sentinel_test(test_calibration_bias_improvements test_calibration_bias_improvements.cpp)
 set_tests_properties(test_calibration_bias_improvements PROPERTIES TIMEOUT 30)
 
+sentinel_test(benchmark_calibration_deep test_benchmark_calibration_deep.cpp)
+set_tests_properties(benchmark_calibration_deep PROPERTIES TIMEOUT 30)
+
 sentinel_test(test_ensemble_predictor_deep  test_ensemble_predictor_deep.cpp)
 set_tests_properties(test_ensemble_predictor_deep PROPERTIES TIMEOUT 60)
 
@@ -647,6 +653,16 @@ set_tests_properties(test_pipeline_e2e_stress PROPERTIES TIMEOUT 120)
 sentinel_test(database_performance test_database_performance.cpp)
 set_tests_properties(database_performance PROPERTIES TIMEOUT 120)
 
+sentinel_test(appconfig_database_deep test_appconfig_database_deep.cpp)
+target_sources(appconfig_database_deep PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
+)
+set_tests_properties(appconfig_database_deep PROPERTIES
+    TIMEOUT 60
+    LABELS "ui"
+    ENVIRONMENT "SENTINEL_HEADLESS_TEST=1;PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+)
+
 # ── MainWindow completeness test — needs QApplication + full UI source tree ──
 qt_add_executable(main_window_completeness
     test_main_window_completeness.cpp
@@ -676,3 +692,16 @@ set_tests_properties(main_window_completeness PROPERTIES
     LABELS "ui"
     ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
 )
+
+# ── Comprehensive UI widget tests (iteration 4) ───────────────────────────────
+sentinel_test(ui_comprehensive
+    test_ui_comprehensive.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+)
+set_tests_properties(ui_comprehensive PROPERTIES LABELS "ui")

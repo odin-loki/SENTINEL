@@ -11,6 +11,17 @@
 #include <QSizePolicy>
 #include <QComboBox>
 #include <QDir>
+#include <QProcessEnvironment>
+
+namespace {
+
+bool headlessTestMode()
+{
+    return QProcessEnvironment::systemEnvironment()
+        .contains(QStringLiteral("SENTINEL_HEADLESS_TEST"));
+}
+
+} // namespace
 
 // ─────────────────────────────────────────────────────────────────────────────
 SettingsWidget::SettingsWidget(AppConfig& cfg, QWidget* parent)
@@ -202,6 +213,7 @@ void SettingsWidget::setupUI()
         form->setLabelAlignment(Qt::AlignRight);
 
         m_hawkesHistorySpin = new QSpinBox(box);
+        m_hawkesHistorySpin->setObjectName(QStringLiteral("hawkesHistorySpin"));
         m_hawkesHistorySpin->setRange(7, 365);
         m_hawkesHistorySpin->setSuffix(" days");
         m_hawkesHistorySpin->setToolTip("Look-back window for Hawkes process training");
@@ -461,6 +473,7 @@ void SettingsWidget::setupUI()
                                "QPushButton:hover { color: #eaeaea; }");
 
     m_saveBtn = new QPushButton("Save Settings", this);
+    m_saveBtn->setObjectName(QStringLiteral("saveSettingsBtn"));
     m_saveBtn->setStyleSheet("QPushButton { background-color: #e94560; color: #eaeaea; font-weight: bold; }"
                               "QPushButton:hover { background-color: #c62828; }");
     m_saveBtn->setMinimumWidth(140);
@@ -585,15 +598,20 @@ void SettingsWidget::onSave()
 {
     // Basic validation
     if (m_databasePathEdit->text().trimmed().isEmpty()) {
-        QMessageBox::warning(this, "Validation Error", "Database path must not be empty.");
+        if (!headlessTestMode()) {
+            QMessageBox::warning(this, "Validation Error", "Database path must not be empty.");
+        }
         return;
     }
 
     applyToConfig();
+    emit settingsSaved(m_cfg);
+
+    if (headlessTestMode())
+        return;
 
     try {
         m_cfg.save();
-        emit settingsSaved(m_cfg);
         QMessageBox::information(this, "Settings Saved", "Configuration saved successfully.");
     } catch (const std::exception& ex) {
         QMessageBox::critical(this, "Save Error",
@@ -659,7 +677,7 @@ void SettingsWidget::onResetToDefaults()
         QMessageBox::Yes | QMessageBox::Cancel);
 
     if (reply == QMessageBox::Yes) {
-        m_cfg = AppConfig{};
+        m_cfg.resetToDefaults();
         loadFromConfig();
         try { m_cfg.save(); } catch (...) {}
         emit settingsSaved(m_cfg);

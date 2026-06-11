@@ -555,7 +555,7 @@ private slots:
         const QString html = DataExporter::leadsToHtml(leads);
         QVERIFY2(html.contains(QStringLiteral("<table")),
                  "Leads HTML must contain a table");
-        QVERIFY2(html.contains(QStringLiteral("0.8200"))
+        QVERIFY2(html.contains(QStringLiteral("82"))
                      || html.contains(QStringLiteral("0.82")),
                  "Leads HTML must expose confidence score");
     }

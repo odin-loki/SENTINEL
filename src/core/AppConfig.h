@@ -35,10 +35,14 @@ struct AppConfig {
     // Forecast horizon
     int forecastHorizonDays = 7;
 
-    // GP Regression hyperparameters
-    double gpSigma2      = 1.0;    // signal variance
-    double gpLengthscale = 0.5;    // length-scale (degrees)
-    double gpNoiseSigma2 = 0.1;    // observation noise variance
+    // GP Regression hyperparameters  (all must be > 0)
+    double gpSigma2      = 1.0;    // signal variance; valid: (0, 100]
+    double gpLengthscale = 0.5;    // length-scale (degrees); valid: (0, 10]
+    double gpNoiseSigma2 = 0.1;    // observation noise variance; valid: (0, 10]
+
+    // Rossmo geographic profiling exponents (GeographicProfiler)
+    double rossmoF = 1.2;          // near-zone decay; valid: (0, 3]
+    double rossmoG = 1.2;          // far-zone decay;  valid: (0, 3]
 
     // Ensemble weights
     double ensemblePoissonWeight = 0.5;
@@ -77,6 +81,43 @@ struct AppConfig {
         saveTo(settings);
     }
 
+    // ── Reset every field to factory defaults ─────────────────────────────────
+    void resetToDefaults() {
+        *this = AppConfig{};
+        databasePath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                       + "/sentinel.db";
+    }
+
+    // ── Validate parameter ranges; returns false if any value is out of range ─
+    bool validate() const {
+        if (defaultLat < -90.0 || defaultLat > 90.0)   return false;
+        if (defaultLon < -180.0 || defaultLon > 180.0)   return false;
+        if (defaultRadius <= 0.0)                        return false;
+        if (hawkesHistoryDays < 7 || hawkesHistoryDays > 365) return false;
+        if (seriesMinEvents < 2)                         return false;
+        if (seriesEpsKm <= 0.0)                          return false;
+        if (seriesEpsDays <= 0.0)                        return false;
+        if (qualityThreshold < 0.0 || qualityThreshold > 1.0) return false;
+        if (alertElevated < 0.0 || alertElevated > 1.0)  return false;
+        if (alertHigh < 0.0 || alertHigh > 1.0)          return false;
+        if (alertCritical < 0.0 || alertCritical > 1.0)  return false;
+        if (alertElevated >= alertHigh)                  return false;
+        if (alertHigh >= alertCritical)                  return false;
+        if (forecastHorizonDays < 1 || forecastHorizonDays > 30) return false;
+        if (gpSigma2 <= 0.0 || gpSigma2 > 100.0)         return false;
+        if (gpLengthscale <= 0.0 || gpLengthscale > 10.0) return false;
+        if (gpNoiseSigma2 <= 0.0 || gpNoiseSigma2 > 10.0) return false;
+        if (rossmoF <= 0.0 || rossmoF > 3.0)             return false;
+        if (rossmoG <= 0.0 || rossmoG > 3.0)             return false;
+        if (ensemblePoissonWeight < 0.0 || ensemblePoissonWeight > 1.0) return false;
+        if (ensembleHawkesWeight < 0.0 || ensembleHawkesWeight > 1.0)   return false;
+        if (refreshIntervalSeconds < 10)               return false;
+        if (mapZoomLevel < 1.0 || mapZoomLevel > 20.0) return false;
+        if (maxLeadCount < 1 || maxLeadCount > 10000)  return false;
+        if (databasePath.trimmed().isEmpty())            return false;
+        return true;
+    }
+
 private:
     static AppConfig loadFrom(QSettings& settings) {
         AppConfig c;
@@ -96,9 +137,11 @@ private:
         c.alertHigh      = std::clamp(settings.value("alert/high",      0.50).toDouble(), 0.0, 1.0);
         c.alertCritical  = std::clamp(settings.value("alert/critical",  0.75).toDouble(), 0.0, 1.0);
         c.forecastHorizonDays    = settings.value("model/forecast_horizon", 7).toInt();
-        c.gpSigma2               = settings.value("gp/sigma2",       1.0).toDouble();
-        c.gpLengthscale          = settings.value("gp/lengthscale",  0.5).toDouble();
-        c.gpNoiseSigma2          = settings.value("gp/noise_sigma2", 0.1).toDouble();
+        c.gpSigma2               = std::clamp(settings.value("gp/sigma2",       1.0).toDouble(),  0.001, 100.0);
+        c.gpLengthscale          = std::clamp(settings.value("gp/lengthscale",  0.5).toDouble(),  0.001, 10.0);
+        c.gpNoiseSigma2          = std::clamp(settings.value("gp/noise_sigma2", 0.1).toDouble(),  0.001, 10.0);
+        c.rossmoF                = std::clamp(settings.value("model/rossmo_f",  1.2).toDouble(),  0.001, 3.0);
+        c.rossmoG                = std::clamp(settings.value("model/rossmo_g",  1.2).toDouble(),  0.001, 3.0);
         c.ensemblePoissonWeight  = settings.value("ensemble/poisson_weight", 0.5).toDouble();
         c.ensembleHawkesWeight   = settings.value("ensemble/hawkes_weight",  0.5).toDouble();
         c.autoRefreshEnabled     = settings.value("refresh/enabled", false).toBool();
@@ -133,6 +176,8 @@ private:
         settings.setValue("gp/sigma2",               gpSigma2);
         settings.setValue("gp/lengthscale",          gpLengthscale);
         settings.setValue("gp/noise_sigma2",         gpNoiseSigma2);
+        settings.setValue("model/rossmo_f",          rossmoF);
+        settings.setValue("model/rossmo_g",          rossmoG);
         settings.setValue("ensemble/poisson_weight", ensemblePoissonWeight);
         settings.setValue("ensemble/hawkes_weight",  ensembleHawkesWeight);
         settings.setValue("refresh/enabled",         autoRefreshEnabled);

@@ -32,6 +32,7 @@ set(CORE_SOURCES
     src/models/PoissonBaseline.cpp
     src/models/HawkesProcess.cpp
     src/models/SeriesDetector.cpp
+    src/models/NearRepeatVictimisation.cpp
     src/models/TemporalFeatures.cpp
     src/inference/GeographicProfiler.cpp
     src/inference/MOAnalyser.cpp
@@ -68,6 +69,7 @@ set(CORE_HEADERS
     src/models/PoissonBaseline.h
     src/models/HawkesProcess.h
     src/models/SeriesDetector.h
+    src/models/NearRepeatVictimisation.h
     src/models/TemporalFeatures.h
     src/inference/GeographicProfiler.h
     src/inference/MOAnalyser.h

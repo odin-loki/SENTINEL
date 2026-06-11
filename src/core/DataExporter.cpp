@@ -275,14 +275,15 @@ QString DataExporter::leadsToHtml(const QVector<InvestigativeLead>& leads,
         << "</title></head>\n<body>\n"
         << "<h1>" << title.toHtmlEscaped() << "</h1>\n"
         << "<table>\n<thead>\n"
-        << "<tr><th>Priority</th><th>Crime Type</th><th>Score</th><th>Location</th></tr>\n"
+        << "<tr><th>Rank</th><th>Category</th><th>Confidence</th><th>Headline</th><th>Method</th></tr>\n"
         << "</thead>\n<tbody>\n";
     for (const auto& l : leads) {
         out << "<tr>"
             << "<td>" << l.rank << "</td>"
             << "<td>" << l.category.toHtmlEscaped() << "</td>"
-            << "<td>" << QString::number(l.confidence, 'f', 4) << "</td>"
-            << "<td>" << l.detail.toHtmlEscaped() << "</td>"
+            << "<td>" << QString::number(l.confidence * 100.0, 'f', 1) << "%" << "</td>"
+            << "<td>" << l.headline.toHtmlEscaped() << "</td>"
+            << "<td>" << l.confidenceMethod.toHtmlEscaped() << "</td>"
             << "</tr>\n";
     }
     out << "</tbody>\n</table>\n</body>\n</html>\n";

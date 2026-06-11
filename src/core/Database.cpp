@@ -370,7 +370,7 @@ QVector<CrimeEvent> Database::queryEvents(const QString& crimeType,
     QVector<std::pair<QString,QVariant>> bindings;
 
     if (!crimeType.isEmpty()) {
-        sql += QStringLiteral(" AND crime_type = :crime_type");
+        sql += QStringLiteral(" AND LOWER(crime_type) = LOWER(:crime_type)");
         bindings.append({QStringLiteral(":crime_type"), crimeType});
     }
     if (from.isValid()) {
@@ -706,7 +706,7 @@ QVector<CrimeEvent> Database::queryEvents(const QString& crimeType,
     QVector<std::pair<QString,QVariant>> bindings;
 
     if (!crimeType.isEmpty()) {
-        sql += QStringLiteral(" AND crime_type = :crime_type");
+        sql += QStringLiteral(" AND LOWER(crime_type) = LOWER(:crime_type)");
         bindings.append({QStringLiteral(":crime_type"), crimeType});
     }
     if (from.isValid()) {
