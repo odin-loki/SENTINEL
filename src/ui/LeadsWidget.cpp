@@ -326,6 +326,9 @@ void LeadsWidget::setLeads(const QVector<InvestigativeLead>& leads, const QStrin
     }
 
     m_countLabel->setText(QString("%1 lead%2").arg(m_leads.size()).arg(m_leads.size() == 1 ? "" : "s"));
+
+    if (m_leads.isEmpty() && m_detailPanel)
+        m_detailPanel->clear();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

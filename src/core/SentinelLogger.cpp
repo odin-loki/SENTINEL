@@ -62,12 +62,30 @@ int SentinelLogger::count() const
     return m_entries.size();
 }
 
+namespace {
+
+// QtMsgType enum order does not match severity; rank explicitly for filtering.
+int msgSeverity(QtMsgType type)
+{
+    switch (type) {
+    case QtDebugMsg:   return 0;
+    case QtInfoMsg:    return 1;
+    case QtWarningMsg: return 2;
+    case QtCriticalMsg: return 3;
+    case QtFatalMsg:   return 4;
+    default:           return 0;
+    }
+}
+
+} // namespace
+
 QVector<LogEntry> SentinelLogger::filterByLevel(QtMsgType minLevel) const
 {
     QMutexLocker lock(&s_logMutex);
+    const int minRank = msgSeverity(minLevel);
     QVector<LogEntry> result;
     for (const auto& e : m_entries) {
-        if (e.level >= minLevel)
+        if (msgSeverity(e.level) >= minRank)
             result.append(e);
     }
     return result;

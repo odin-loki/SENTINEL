@@ -163,10 +163,18 @@ QString ProvenanceLog::exportToJson() const
     for (const auto& e : m_entries) {
         QJsonObject obj;
         obj.insert(QStringLiteral("timestamp"), e.timestamp.toString(Qt::ISODate));
-        obj.insert(QStringLiteral("source"),    e.source);
-        obj.insert(QStringLiteral("model"),     e.model);
-        obj.insert(QStringLiteral("action"),    e.action);
-        obj.insert(QStringLiteral("detail"),    e.detail);
+        if (!e.eventId.isEmpty())
+            obj.insert(QStringLiteral("eventId"), e.eventId);
+        if (!e.stage.isEmpty())
+            obj.insert(QStringLiteral("stage"), e.stage);
+        if (!e.source.isEmpty())
+            obj.insert(QStringLiteral("source"), e.source);
+        if (!e.model.isEmpty())
+            obj.insert(QStringLiteral("model"), e.model);
+        obj.insert(QStringLiteral("action"), e.action);
+        obj.insert(QStringLiteral("detail"), e.detail);
+        if (!e.dataHash.isEmpty())
+            obj.insert(QStringLiteral("dataHash"), e.dataHash);
         arr.append(obj);
     }
     return QString::fromUtf8(QJsonDocument(arr).toJson(QJsonDocument::Compact));
@@ -175,9 +183,13 @@ QString ProvenanceLog::exportToJson() const
 QString ProvenanceLog::exportToCsv() const
 {
     QMutexLocker lock(&m_mutex);
-    QString out = QStringLiteral("timestamp,source,model,action,detail\n");
+    QString out = QStringLiteral("timestamp,eventId,stage,source,model,action,detail,dataHash\n");
     for (const auto& e : m_entries) {
         out += csvEscape(e.timestamp.toString(Qt::ISODate))
+            + QLatin1Char(',')
+            + csvEscape(e.eventId)
+            + QLatin1Char(',')
+            + csvEscape(e.stage)
             + QLatin1Char(',')
             + csvEscape(e.source)
             + QLatin1Char(',')
@@ -186,6 +198,8 @@ QString ProvenanceLog::exportToCsv() const
             + csvEscape(e.action)
             + QLatin1Char(',')
             + csvEscape(e.detail)
+            + QLatin1Char(',')
+            + csvEscape(e.dataHash)
             + QLatin1Char('\n');
     }
     return out;

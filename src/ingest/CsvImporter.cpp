@@ -188,7 +188,9 @@ QVector<CrimeEvent> CsvImporter::importFile(const QString& filePath,
 
     // Read header
     if (stream.atEnd()) return results;
-    const QString headerLine = stream.readLine();
+    QString headerLine = stream.readLine();
+    if (headerLine.startsWith(QChar(0xFEFF)))
+        headerLine.remove(0, 1);
     const QStringList headers = parseCsvLine(headerLine);
 
     CsvColumnMap map = detectColumns(headers);

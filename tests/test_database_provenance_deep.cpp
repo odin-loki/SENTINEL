@@ -308,7 +308,8 @@ private slots:
         log.addEntry(QStringLiteral("s"), QStringLiteral("m"), QStringLiteral("a"), QStringLiteral("d"));
         const QString csv = log.exportToCsv();
         const QString firstLine = csv.section(QLatin1Char('\n'), 0, 0);
-        QCOMPARE(firstLine, QStringLiteral("timestamp,source,model,action,detail"));
+        QCOMPARE(firstLine, QStringLiteral(
+            "timestamp,eventId,stage,source,model,action,detail,dataHash"));
     }
 
     void testExportToCsvEscapesComma()

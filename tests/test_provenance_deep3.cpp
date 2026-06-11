@@ -180,7 +180,8 @@ private slots:
     {
         ProvenanceLog log;
         log.record("E1", "ingest", "import", "detail");
-        QVERIFY(log.exportToCsv().startsWith("timestamp,source,model,action,detail\n"));
+        QVERIFY(log.exportToCsv().startsWith(
+            "timestamp,eventId,stage,source,model,action,detail,dataHash\n"));
     }
 
     void testExportToCsvRowCount()
