@@ -65,8 +65,9 @@ void EnsemblePredictor::calibrate(
     QVector<Bin> bins(NBINS);
 
     for (const auto& [pred, act] : calibrationData) {
-        const int idx = std::min(static_cast<int>(pred * NBINS), NBINS - 1);
-        bins[idx].sumPred += pred;
+        const double clampedPred = std::clamp(pred, 0.0, 1.0);
+        const int idx = std::min(static_cast<int>(clampedPred * NBINS), NBINS - 1);
+        bins[idx].sumPred += clampedPred;
         bins[idx].sumAct  += act;
         bins[idx].n++;
     }
@@ -200,7 +201,7 @@ EnsemblePrediction EnsemblePredictor::predict(
     // Apply calibration if available
     result.probCrime  = applyCal(std::clamp(result.probCrime, 0.0, 1.0));
     result.ci90       = {result.expectedCount * 0.65, result.expectedCount * 1.55};
-    result.calibrated = m_calibrated;
+    result.calibrated = m_calibrated && (havePoi || haveHawks);
 
     // 95% confidence interval on probCrime using combined uncertainty
     {

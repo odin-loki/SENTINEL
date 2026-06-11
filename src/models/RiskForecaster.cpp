@@ -25,10 +25,10 @@ void RiskForecaster::fit(const QVector<CrimeEvent>& events, const QString& crime
     m_crimeType = crimeType;
     m_recentCounts.clear();
 
-    // Find the latest event date
+    // Find the latest event date (use occurredAt when present — matches Poisson fit)
     QDate latest;
     for (const auto& e : events) {
-        const QDate d = e.timestamp.date();
+        const QDate d = e.occurredAt.value_or(e.timestamp).date();
         if (!latest.isValid() || d > latest) latest = d;
     }
 
@@ -40,9 +40,10 @@ void RiskForecaster::fit(const QVector<CrimeEvent>& events, const QString& crime
         records.append({zone, dt, e.crimeType});
 
         if (latest.isValid()) {
-            const int daysAgo = e.timestamp.date().daysTo(latest);
+            const QDate evDate = dt.date();
+            const int daysAgo = evDate.daysTo(latest);
             if (daysAgo >= 0 && daysAgo <= 30)
-                m_recentCounts[zone].append(e.timestamp.date());
+                m_recentCounts[zone].append(evDate);
         }
     }
 

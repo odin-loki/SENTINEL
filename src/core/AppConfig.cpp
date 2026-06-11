@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <cmath>
 
 namespace {
 
@@ -151,6 +152,16 @@ bool AppConfig::validate()
     ok &= clampValue(rossmoG, 0.001, 3.0);
     ok &= clampValue(ensemblePoissonWeight, 0.0, 1.0);
     ok &= clampValue(ensembleHawkesWeight, 0.0, 1.0);
+    const double wSum = ensemblePoissonWeight + ensembleHawkesWeight;
+    if (wSum > 0.0 && std::abs(wSum - 1.0) > 1e-6) {
+        ensemblePoissonWeight /= wSum;
+        ensembleHawkesWeight  /= wSum;
+        ok = false;
+    } else if (wSum <= 0.0) {
+        ensemblePoissonWeight = 0.5;
+        ensembleHawkesWeight  = 0.5;
+        ok = false;
+    }
     ok &= clampValue(refreshIntervalSeconds, 10, 86400);
     ok &= clampValue(mapZoomLevel, 1.0, 20.0);
     ok &= clampValue(maxLeadCount, 1, 10000);
