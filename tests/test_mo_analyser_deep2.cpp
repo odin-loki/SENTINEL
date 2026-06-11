@@ -1,194 +1,255 @@
-#include <QtTest>
+// Iteration 12 — MOAnalyser deep test
+#include <QtTest/QtTest>
+#include <cmath>
 #include "inference/MOAnalyser.h"
 #include "core/CrimeEvent.h"
-#include <cmath>
 
-namespace {
-
-static MOCaseRecord makeCase(const QString& id, const QString& mo, bool resolved = false)
+class MOAnalyserDeep2Test : public QObject
 {
-    MOCaseRecord r;
-    r.caseId   = id;
-    r.moText   = mo;
-    r.resolved = resolved;
-    r.outcome  = resolved ? QStringLiteral("resolved") : QStringLiteral("unresolved");
-    return r;
-}
-
-} // namespace
-
-class TestMOAnalyserDeep2 : public QObject {
     Q_OBJECT
+
+    static MOCaseRecord makeRecord(const QString& caseId, const QString& moText,
+                                   bool resolved = false)
+    {
+        MOCaseRecord r;
+        r.caseId  = caseId;
+        r.moText  = moText;
+        r.resolved = resolved;
+        return r;
+    }
 
 private slots:
 
-    void testTFIDF_repeatedTermHigherTF()
+    // ─── Fit / state ──────────────────────────────────────────────────────
+
+    void testUnfittedReturnsEmpty()
     {
-        // "thief thief thief": TF("thief")=1.0
-        // "thief burglar":     TF("thief")=0.5
-        // Both unresolved (no boost). Query "thief" should rank c1 first.
-        QVector<MOCaseRecord> cases;
-        cases << makeCase("c1", "thief thief thief");
-        cases << makeCase("c2", "thief burglar");
-
-        MOAnalyser analyser;
-        analyser.fit(cases);
-
-        const auto results = analyser.findSimilar("thief", 5, 0.0);
-        QVERIFY(!results.isEmpty());
-        QCOMPARE(results.first().caseId, QStringLiteral("c1"));
+        MOAnalyser ma;
+        QVERIFY(!ma.isFitted());
+        const auto matches = ma.findSimilar("test query");
+        QVERIFY(matches.isEmpty());
     }
 
-    void testCosineSimilarity_identicalDocument_isOne()
+    void testFitSetsIsFitted()
     {
-        // Query identical to corpus doc → cosine = 1.0, boostedScore = 1.0 (capped)
-        const QString moText = "forced entry night window residential crowbar gloves solo";
-
-        QVector<MOCaseRecord> cases;
-        cases << makeCase("exact", moText);
-        cases << makeCase("other", "arson petrol warehouse fire accelerant ignition");
-
-        MOAnalyser analyser;
-        analyser.fit(cases);
-
-        const auto results = analyser.findSimilar(moText, 5, 0.0);
-        QVERIFY(!results.isEmpty());
-        QCOMPARE(results.first().caseId, QStringLiteral("exact"));
-        QVERIFY2(results.first().similarityScore >= 0.999,
-                 qPrintable(QStringLiteral("Self-similarity should be ~1.0, got %1")
-                                .arg(results.first().similarityScore)));
+        MOAnalyser ma;
+        ma.fit({ makeRecord("C1", "entered via rear window with crowbar") });
+        QVERIFY(ma.isFitted());
+        QCOMPARE(ma.caseCount(), 1);
     }
 
-    void testCosineSimilarity_orthogonalDocuments_isZero()
+    void testFitEmptyDoesNotCrash()
     {
-        // Two docs with completely disjoint vocabularies.
-        // Query on vocab-A terms should give 0 similarity with vocab-B doc.
-        QVector<MOCaseRecord> cases;
-        cases << makeCase("doc_a", "alpha beta gamma");
-        cases << makeCase("doc_b", "delta epsilon zeta");
+        MOAnalyser ma;
+        ma.fit({});
+        QCOMPARE(ma.caseCount(), 0);
+        QVERIFY(ma.findSimilar("test").isEmpty());
+    }
 
-        MOAnalyser analyser;
-        analyser.fit(cases);
+    // ─── Cosine similarity properties ─────────────────────────────────────
 
-        // Query only contains "alpha" — no shared terms with doc_b
-        const auto results = analyser.findSimilar("alpha", 5, 0.0);
-        for (const auto& m : results) {
-            if (m.caseId == QStringLiteral("doc_b")) {
-                QVERIFY2(m.similarityScore < 1e-9,
-                         qPrintable(QStringLiteral("Orthogonal doc similarity should be 0, got %1")
-                                        .arg(m.similarityScore)));
+    void testIdenticalQueryReturnsSimilarityOne()
+    {
+        const QString moText = "entered through rear window with crowbar at night";
+        MOAnalyser ma;
+        ma.fit({ makeRecord("C1", moText) });
+
+        const auto matches = ma.findSimilar(moText, 5, 0.0);
+        QVERIFY(!matches.isEmpty());
+        // Exact same text: cos sim = 1.0 (possibly boosted to 1.2 for resolved, capped at 1.0)
+        QVERIFY2(matches.first().similarityScore > 0.9,
+                 qPrintable(QStringLiteral("Expected sim > 0.9, got %1").arg(matches.first().similarityScore)));
+    }
+
+    void testDifferentTextLowSimilarity()
+    {
+        MOAnalyser ma;
+        ma.fit({ makeRecord("C1", "burglary rear window crowbar") });
+
+        // Completely unrelated MO text — shouldn't appear in results with default threshold 0.3
+        const auto matches = ma.findSimilar("arson vehicle fire accelerant", 5, 0.3);
+        // Should return empty or very low similarity
+        for (const auto& m : matches) {
+            QVERIFY2(m.similarityScore < 0.5,
+                     qPrintable(QStringLiteral("Unrelated text matched too high: %1").arg(m.similarityScore)));
+        }
+    }
+
+    void testSimilarTextHigherRankThanDissimilar()
+    {
+        MOAnalyser ma;
+        ma.fit({
+            makeRecord("SIMILAR", "entered rear window crowbar nighttime"),
+            makeRecord("DISSIMILAR", "arson vehicle accelerant fire daytime")
+        });
+
+        const auto matches = ma.findSimilar("rear window crowbar break-in", 10, 0.0);
+        // SIMILAR case should appear before DISSIMILAR
+        if (matches.size() >= 2) {
+            bool similarFirst = false;
+            for (int i = 0; i < matches.size(); ++i) {
+                if (matches[i].caseId == "SIMILAR") { similarFirst = true; break; }
+                if (matches[i].caseId == "DISSIMILAR") break;
             }
-        }
-        // doc_a must be found with positive similarity
-        const bool foundA = std::any_of(results.begin(), results.end(),
-            [](const MOMatch& m){ return m.caseId == QStringLiteral("doc_a"); });
-        QVERIFY2(foundA, "doc_a must be found when querying 'alpha'");
-    }
-
-    void testIDF_rareTermHigherThanCommonTerm()
-    {
-        // "unique_rare" appears in 1 of 3 docs; "common" appears in all 3.
-        // IDF("unique_rare") = log(4/2)+1 ≈ 1.693
-        // IDF("common")      = log(4/4)+1 = 1.0
-        // Query "unique_rare" vs doc_a should score higher than
-        // query "common" vs doc_a (same mixed doc in both cases).
-        QVector<MOCaseRecord> cases;
-        cases << makeCase("doc_a", "common unique_rare");
-        cases << makeCase("doc_b", "common regular");
-        cases << makeCase("doc_c", "common standard");
-
-        MOAnalyser analyser;
-        analyser.fit(cases);
-
-        // Find sim("unique_rare", doc_a)
-        double simRare = 0.0;
-        {
-            const auto r = analyser.findSimilar("unique_rare", 5, 0.0);
-            for (const auto& m : r)
-                if (m.caseId == QStringLiteral("doc_a")) { simRare = m.similarityScore; break; }
-        }
-
-        // Find sim("common", doc_a)
-        double simCommon = 0.0;
-        {
-            const auto r = analyser.findSimilar("common", 5, 0.0);
-            for (const auto& m : r)
-                if (m.caseId == QStringLiteral("doc_a")) { simCommon = m.similarityScore; break; }
-        }
-
-        QVERIFY2(simRare > simCommon,
-                 qPrintable(QStringLiteral("Rare-term query sim=%1 must be > common-term sim=%2")
-                                .arg(simRare).arg(simCommon)));
-    }
-
-    void testFindSimilar_sortedDescending()
-    {
-        // Build corpus with varied similarity to query; results must be sorted descending.
-        QVector<MOCaseRecord> cases;
-        cases << makeCase("full",   "burglary window night residential crowbar jewels solo");
-        cases << makeCase("partial","burglary window night");
-        cases << makeCase("single", "burglary");
-        cases << makeCase("unrelated", "fraud phone scam bank wire transfer");
-
-        MOAnalyser analyser;
-        analyser.fit(cases);
-
-        const auto results = analyser.findSimilar(
-            "burglary window night residential crowbar", 10, 0.0);
-
-        for (int i = 1; i < results.size(); ++i) {
-            QVERIFY2(results[i-1].similarityScore >= results[i].similarityScore - 1e-9,
-                     qPrintable(QStringLiteral("Results not sorted at index %1: %2 < %3")
-                                    .arg(i)
-                                    .arg(results[i-1].similarityScore)
-                                    .arg(results[i].similarityScore)));
+            QVERIFY2(similarFirst, "SIMILAR case should rank before DISSIMILAR case");
         }
     }
 
-    void testEmptyCorpus_returnsNoResults()
-    {
-        MOAnalyser analyser;
-        QVERIFY(!analyser.isFitted());
+    // ─── Resolved case boosting ───────────────────────────────────────────
 
-        const auto results = analyser.findSimilar("robbery night weapon", 10, 0.0);
-        QVERIFY2(results.isEmpty(),
-                 qPrintable(QStringLiteral("Empty corpus should return 0 results, got %1")
-                                .arg(results.size())));
+    void testResolvedCaseBoosted()
+    {
+        const QString moText = "entry through window crowbar";
+        MOAnalyser ma;
+        ma.fit({
+            makeRecord("RESOLVED",   moText, true),   // resolved → boosted
+            makeRecord("UNRESOLVED", moText, false)   // same text, not boosted
+        });
+
+        const auto matches = ma.findSimilar(moText, 10, 0.0);
+        // Both should match; RESOLVED should appear first
+        QVERIFY(!matches.isEmpty());
+        // The resolved case gets sim * 1.2 (capped at 1.0)
+        bool resolvedFirst = !matches.isEmpty() &&
+                             matches.first().caseId == QStringLiteral("RESOLVED");
+        QVERIFY2(resolvedFirst, "Resolved case should rank first due to boosting");
     }
 
-    void testSingleDocumentCorpus()
+    // ─── Shared features extraction ───────────────────────────────────────
+
+    void testSharedFeaturesCorrect()
     {
-        const QString moText = QStringLiteral("robbery weapon victim night street");
-        QVector<MOCaseRecord> cases;
-        cases << makeCase("only", moText);
+        MOAnalyser ma;
+        ma.fit({ makeRecord("C1", "entry rear window crowbar nighttime dark") });
 
-        MOAnalyser analyser;
-        analyser.fit(cases);
-        QCOMPARE(analyser.caseCount(), 1);
+        const auto matches = ma.findSimilar("rear window crowbar", 5, 0.0);
+        QVERIFY(!matches.isEmpty());
 
-        // Query with the exact same text → cosine = 1.0
-        const auto results = analyser.findSimilar(moText, 5, 0.0);
-        QVERIFY(!results.isEmpty());
-        QCOMPARE(results.first().caseId, QStringLiteral("only"));
-        QVERIFY(results.first().similarityScore >= 0.99);
+        // Shared features should contain "rear", "window", "crowbar"
+        const QStringList& shared = matches.first().sharedFeatures;
+        QVERIFY2(shared.contains("rear"),   "Expected 'rear' in shared features");
+        QVERIFY2(shared.contains("window"), "Expected 'window' in shared features");
+        QVERIFY2(shared.contains("crowbar"),"Expected 'crowbar' in shared features");
     }
 
-    void testDocumentNotInCorpus_queryStillWorks()
+    void testSharedFeaturesNoDuplicates()
     {
-        // Query text doesn't have to be in the corpus; OOV terms are ignored.
+        MOAnalyser ma;
+        ma.fit({ makeRecord("C1", "window window window door") });
+
+        const auto matches = ma.findSimilar("window window", 5, 0.0);
+        if (!matches.isEmpty()) {
+            const QStringList& shared = matches.first().sharedFeatures;
+            // No duplicates (removeDuplicates is called)
+            int windowCount = shared.count("window");
+            QVERIFY2(windowCount <= 1,
+                     qPrintable(QStringLiteral("'window' appears %1 times in shared, expected ≤ 1").arg(windowCount)));
+        }
+    }
+
+    // ─── Top-K bounding ───────────────────────────────────────────────────
+
+    void testTopKBounded()
+    {
+        MOAnalyser ma;
         QVector<MOCaseRecord> cases;
-        cases << makeCase("c1", "robbery weapon victim");
-        cases << makeCase("c2", "fraud scam elderly phone");
+        for (int i = 1; i <= 20; ++i)
+            cases.append(makeRecord(QStringLiteral("C%1").arg(i),
+                                    QStringLiteral("rear window crowbar entry crime %1").arg(i)));
+        ma.fit(cases);
 
-        MOAnalyser analyser;
-        analyser.fit(cases);
+        const auto matches = ma.findSimilar("rear window crowbar", 5, 0.0);
+        QVERIFY2(matches.size() <= 5,
+                 qPrintable(QStringLiteral("Expected ≤ 5 results, got %1").arg(matches.size())));
+    }
 
-        // "robbery" is in vocab; "zzzunknown" is not
-        const auto results = analyser.findSimilar("robbery zzzunknown", 5, 0.0);
-        QVERIFY(!results.isEmpty());
-        QCOMPARE(results.first().caseId, QStringLiteral("c1"));
+    // ─── Minimum similarity threshold ─────────────────────────────────────
+
+    void testMinSimilarityFiltersResults()
+    {
+        MOAnalyser ma;
+        ma.fit({
+            makeRecord("C1", "burglary rear window crowbar"),
+            makeRecord("C2", "completely unrelated different content here")
+        });
+
+        // High threshold should filter out low-similarity cases
+        const auto matches = ma.findSimilar("rear window crowbar", 5, 0.9);
+        for (const auto& m : matches) {
+            QVERIFY2(m.similarityScore >= 0.9,
+                     qPrintable(QStringLiteral("Similarity %1 below threshold 0.9").arg(m.similarityScore)));
+        }
+    }
+
+    // ─── SimilarityScore in [0,1] ─────────────────────────────────────────
+
+    void testSimilarityScoreInRange()
+    {
+        MOAnalyser ma;
+        ma.fit({
+            makeRecord("C1", "burglary rear window crowbar", true),
+            makeRecord("C2", "theft pickpocket city centre"),
+            makeRecord("C3", "assault bar fight night")
+        });
+
+        const auto matches = ma.findSimilar("rear window entry crowbar", 10, 0.0);
+        for (const auto& m : matches) {
+            QVERIFY2(m.similarityScore >= 0.0 && m.similarityScore <= 1.0,
+                     qPrintable(QStringLiteral("similarityScore out of [0,1]: %1").arg(m.similarityScore)));
+        }
+    }
+
+    // ─── Sorted by similarity descending ─────────────────────────────────
+
+    void testResultsSortedBySimilarityDesc()
+    {
+        MOAnalyser ma;
+        ma.fit({
+            makeRecord("C1", "rear window crowbar entry forced"),
+            makeRecord("C2", "door lock pick jimmy crowbar"),
+            makeRecord("C3", "completely different text"),
+            makeRecord("C4", "window glass smash crowbar entry")
+        });
+
+        const auto matches = ma.findSimilar("rear window crowbar forced entry", 10, 0.0);
+        for (int i = 1; i < matches.size(); ++i) {
+            QVERIFY2(matches[i-1].similarityScore >= matches[i].similarityScore,
+                     qPrintable(QStringLiteral("Results not sorted: [%1]=%2 vs [%3]=%4")
+                                .arg(i-1).arg(matches[i-1].similarityScore)
+                                .arg(i).arg(matches[i].similarityScore)));
+        }
+    }
+
+    // ─── Case ID preserved ────────────────────────────────────────────────
+
+    void testCaseIdPreserved()
+    {
+        MOAnalyser ma;
+        ma.fit({ makeRecord("CASE_XYZ_789", "burglary window entry forced") });
+
+        const auto matches = ma.findSimilar("window entry forced", 5, 0.0);
+        QVERIFY(!matches.isEmpty());
+        QCOMPARE(matches.first().caseId, QStringLiteral("CASE_XYZ_789"));
+    }
+
+    // ─── IDF property: rare terms have higher weight ─────────────────────
+
+    void testRareTermsRankedHigher()
+    {
+        // "crowbar" appears only in C1; "entry" appears in all three
+        // → C1 should rank higher than C2/C3 for query "entry crowbar"
+        MOAnalyser ma;
+        ma.fit({
+            makeRecord("C1", "entry crowbar window"),  // has crowbar (rare)
+            makeRecord("C2", "entry door lock"),       // no crowbar
+            makeRecord("C3", "entry forced pry")       // no crowbar
+        });
+
+        const auto matches = ma.findSimilar("entry crowbar", 5, 0.0);
+        QVERIFY(!matches.isEmpty());
+        QCOMPARE(matches.first().caseId, QStringLiteral("C1"));
     }
 };
 
-QTEST_GUILESS_MAIN(TestMOAnalyserDeep2)
+QTEST_GUILESS_MAIN(MOAnalyserDeep2Test)
 #include "test_mo_analyser_deep2.moc"

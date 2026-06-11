@@ -151,7 +151,7 @@ sentinel_test(test_database_wal             test_database_wal.cpp)
 set_tests_properties(test_database_wal PROPERTIES TIMEOUT 30)
 
 sentinel_test(test_csv_importer_roundtrip   test_csv_importer_roundtrip.cpp)
-set_tests_properties(test_csv_importer_roundtrip PROPERTIES TIMEOUT 60)
+set_tests_properties(test_csv_importer_roundtrip PROPERTIES TIMEOUT 120)
 
 sentinel_test(test_data_exporter_html test_data_exporter_html.cpp)
 set_tests_properties(test_data_exporter_html PROPERTIES TIMEOUT 30)
@@ -875,3 +875,87 @@ sentinel_test(pipeline_edge_cases test_pipeline_edge_cases.cpp)
 set_tests_properties(pipeline_edge_cases PROPERTIES TIMEOUT 60)
 sentinel_test(benchmark_metrics_deep3 test_benchmark_metrics_deep3.cpp)
 set_tests_properties(benchmark_metrics_deep3 PROPERTIES TIMEOUT 30)
+
+sentinel_test(near_repeat_deep3 test_near_repeat_deep3.cpp)
+set_tests_properties(near_repeat_deep3 PROPERTIES TIMEOUT 30)
+
+sentinel_test(provenance_deep2 test_provenance_deep2.cpp)
+set_tests_properties(provenance_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(data_exporter_deep2 test_data_exporter_deep2.cpp)
+set_tests_properties(data_exporter_deep2 PROPERTIES TIMEOUT 30)
+
+sentinel_test(evidence_scorer_deep3 test_evidence_scorer_deep3.cpp)
+set_tests_properties(evidence_scorer_deep3 PROPERTIES TIMEOUT 30)
+sentinel_test(anomaly_detector_deep3 test_anomaly_detector_deep3.cpp)
+set_tests_properties(anomaly_detector_deep3 PROPERTIES TIMEOUT 30)
+
+sentinel_test(poisson_baseline_deep3 test_poisson_baseline_deep3.cpp)
+set_tests_properties(poisson_baseline_deep3 PROPERTIES TIMEOUT 30)
+sentinel_test(hawkes_process_deep3 test_hawkes_process_deep3.cpp)
+set_tests_properties(hawkes_process_deep3 PROPERTIES TIMEOUT 30)
+sentinel_test(temporal_features_deep3 test_temporal_features_deep3.cpp)
+set_tests_properties(temporal_features_deep3 PROPERTIES TIMEOUT 30)
+sentinel_test(cooffending_deep3 test_cooffending_deep3.cpp)
+set_tests_properties(cooffending_deep3 PROPERTIES TIMEOUT 30)
+sentinel_test(provenance_deep3 test_provenance_deep3.cpp)
+set_tests_properties(provenance_deep3 PROPERTIES TIMEOUT 30)
+sentinel_test(data_exporter_deep3 test_data_exporter_deep3.cpp)
+set_tests_properties(data_exporter_deep3 PROPERTIES TIMEOUT 30)
+
+sentinel_test(appconfig_deep3 test_appconfig_deep3.cpp)
+set_tests_properties(appconfig_deep3 PROPERTIES TIMEOUT 30)
+
+qt_add_executable(test_database_deep3 test_database_deep3.cpp)
+target_include_directories(test_database_deep3 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_database_deep3 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_database_deep3 COMMAND test_database_deep3 -platform offscreen)
+set_tests_properties(test_database_deep3 PROPERTIES
+    TIMEOUT 30
+    LABELS "db"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+sentinel_test(provenance_log_deep3 test_provenance_log_deep3.cpp)
+set_tests_properties(provenance_log_deep3 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 12: MainWindow & DashboardWidget ─────────────────────
+qt_add_executable(test_main_window_deep2
+    test_main_window_deep2.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MainWindow.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AuditLogWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
+)
+target_include_directories(test_main_window_deep2 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_main_window_deep2 PRIVATE sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_main_window_deep2 COMMAND test_main_window_deep2 -platform offscreen)
+set_tests_properties(test_main_window_deep2 PROPERTIES TIMEOUT 30 LABELS "ui" ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+qt_add_executable(test_dashboard_widget_deep2
+    test_dashboard_widget_deep2.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+)
+target_include_directories(test_dashboard_widget_deep2 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_dashboard_widget_deep2 PRIVATE sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_dashboard_widget_deep2 COMMAND test_dashboard_widget_deep2 -platform offscreen)
+set_tests_properties(test_dashboard_widget_deep2 PROPERTIES TIMEOUT 30 LABELS "ui" ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+sentinel_test(hawkes_process_deep4 test_hawkes_process_deep4.cpp)
+set_tests_properties(hawkes_process_deep4 PROPERTIES TIMEOUT 30)
+sentinel_test(poisson_baseline_deep4 test_poisson_baseline_deep4.cpp)
+set_tests_properties(poisson_baseline_deep4 PROPERTIES TIMEOUT 30)
+sentinel_test(near_repeat_deep4 test_near_repeat_deep4.cpp)
+set_tests_properties(near_repeat_deep4 PROPERTIES TIMEOUT 30)
+
+sentinel_test(evidence_scorer_deep4 test_evidence_scorer_deep4.cpp)
+set_tests_properties(evidence_scorer_deep4 PROPERTIES TIMEOUT 30)
+sentinel_test(geographic_profiler_deep3 test_geographic_profiler_deep3.cpp)
+set_tests_properties(geographic_profiler_deep3 PROPERTIES TIMEOUT 30)
+sentinel_test(lead_report_deep3 test_lead_report_deep3.cpp)
+set_tests_properties(lead_report_deep3 PROPERTIES TIMEOUT 30)

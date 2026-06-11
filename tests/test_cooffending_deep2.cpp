@@ -44,9 +44,13 @@ class TestCoOffendingDeep2 : public QObject
 private slots:
     void testPageRankStarHubHighest();
     void testBetweennessPathMiddleHighest();
+    void testBetweennessPathNormalizedToOne();
     void testCommunityDisconnectedCliques();
     void testEmptyGraphReturnsEmpty();
     void testSelfLoopsNoInfiniteLoop();
+    void testRiskScoreInRange();
+    void testFindLeadsTopK();
+    void testSingleNode();
 };
 
 // In a star graph, the hub node accumulates PR from all four leaves on each
@@ -183,6 +187,107 @@ void TestCoOffendingDeep2::testSelfLoopsNoInfiniteLoop()
                  qPrintable(QString("Node %1 must not have a self-loop")
                     .arg(n.personId)));
     }
+}
+
+// For the 3-node path A-B-C the only non-trivial shortest path is A→C (and C→A),
+// both go through B.  Brandes gives raw betw[B] = 2; norm = 1/((3-1)*(3-2)) = 0.5.
+// betweenness[B] = 2 * 0.5 = 1.0.
+void TestCoOffendingDeep2::testBetweennessPathNormalizedToOne()
+{
+    CoOffendingAnalyser ca;
+    ca.buildGraph(pathRecords());
+    ca.analyse();
+
+    const auto ns = ca.nodes();
+    const auto b  = std::find_if(ns.begin(), ns.end(),
+        [](const NetworkNode& n){ return n.personId == QStringLiteral("B"); });
+    QVERIFY2(b != ns.end(), "Node B must exist");
+
+    const double bw = b->betweenness;
+    QVERIFY2(std::abs(bw - 1.0) < 1e-9,
+             qPrintable(QString("B betweenness must be 1.0 for A-B-C path, got %1").arg(bw)));
+}
+
+// riskScore() is internal but is surfaced via findLeads().riskScore.
+// For a well-connected graph the scores must all lie in [0, 1].
+void TestCoOffendingDeep2::testRiskScoreInRange()
+{
+    // Build a denser graph: 4 people sharing incidents in different combos.
+    QVector<PersonIncidentRecord> recs;
+    recs.append(pir("X1", "IA"));
+    recs.append(pir("X2", "IA"));
+    recs.append(pir("X2", "IB"));
+    recs.append(pir("X3", "IB"));
+    recs.append(pir("X3", "IC"));
+    recs.append(pir("X4", "IC"));
+
+    CoOffendingAnalyser ca;
+    ca.buildGraph(recs);
+    ca.analyse();
+
+    // findLeads for "IA" pulls direct & second-degree candidates
+    const auto leads = ca.findLeads(QStringLiteral("IA"), 10);
+    for (const auto& l : leads) {
+        QVERIFY2(l.riskScore >= 0.0 && l.riskScore <= 1.0,
+                 qPrintable(QString("riskScore %1 for %2 must be in [0,1]")
+                    .arg(l.riskScore).arg(l.personId)));
+    }
+
+    // Also check all nodes directly.
+    for (const auto& node : ca.nodes()) {
+        QVERIFY2(node.pageRank >= 0.0,
+                 qPrintable(QString("pageRank %1 for %2 must be >= 0").arg(node.pageRank).arg(node.personId)));
+        QVERIFY2(node.betweenness >= 0.0,
+                 qPrintable(QString("betweenness %1 for %2 must be >= 0").arg(node.betweenness).arg(node.personId)));
+    }
+}
+
+// findLeads must return at most topK entries, and they must be sorted by
+// riskScore descending (no adjacent pair is out of order).
+void TestCoOffendingDeep2::testFindLeadsTopK()
+{
+    // 6 people all in one incident — 6 direct participants.
+    QVector<PersonIncidentRecord> recs;
+    for (int i = 1; i <= 6; ++i)
+        recs.append(pir(QString("P%1").arg(i), QStringLiteral("IX")));
+
+    CoOffendingAnalyser ca;
+    ca.buildGraph(recs);
+    ca.analyse();
+
+    const int topK = 3;
+    const auto leads = ca.findLeads(QStringLiteral("IX"), topK);
+    QVERIFY2(leads.size() <= topK,
+             qPrintable(QString("findLeads must return <= %1 leads, got %2").arg(topK).arg(leads.size())));
+
+    for (int i = 1; i < leads.size(); ++i) {
+        QVERIFY2(leads[i - 1].riskScore >= leads[i].riskScore,
+                 qPrintable(QString("Leads not sorted DESC: [%1]=%2 > [%3]=%4")
+                    .arg(i - 1).arg(leads[i - 1].riskScore).arg(i).arg(leads[i].riskScore)));
+    }
+}
+
+// Single-node graph: buildGraph + analyse must not crash.
+// findLeads for an unrelated incidentId must return empty.
+void TestCoOffendingDeep2::testSingleNode()
+{
+    QVector<PersonIncidentRecord> recs;
+    recs.append(pir("SOLO", "INCIDENT_1"));
+
+    CoOffendingAnalyser ca;
+    ca.buildGraph(recs);
+    ca.analyse();  // must not crash or hang
+
+    QCOMPARE(ca.nodes().size(), 1);
+
+    // Known incident: the solo person is the only participant — no second-degree.
+    const auto leads = ca.findLeads(QStringLiteral("INCIDENT_1"), 5);
+    // Should return the solo participant as a direct lead (1 entry).
+    QVERIFY2(leads.size() <= 1, "Single-node graph must produce at most 1 lead");
+
+    // Unknown incident: no participants → empty result.
+    const auto unknown = ca.findLeads(QStringLiteral("NO_SUCH_INCIDENT"), 5);
+    QVERIFY2(unknown.isEmpty(), "findLeads for unknown incident must be empty");
 }
 
 QTEST_GUILESS_MAIN(TestCoOffendingDeep2)

@@ -73,6 +73,8 @@ double AnomalyDetector::isolationScore(const AnomalyFeatureVector& ev,
 {
     // Normalised Euclidean distance from centroid of context (simplified isolation forest)
     if (context.isEmpty()) return 0.0;
+    // A single-event context means the event is trivially isolated (no peers to form a cluster).
+    if (context.size() == 1) return 1.0;
 
     double meanLat = 0, meanLon = 0, meanT = 0, meanH = 0;
     for (const auto& e : context) {

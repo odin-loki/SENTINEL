@@ -35,7 +35,7 @@ private:
     double m_trainLatMean  = 0.0, m_trainLatStd  = 1.0;
     double m_trainLonMean  = 0.0, m_trainLonStd  = 1.0;
     double m_trainTMean    = 0.0, m_trainTStd    = 1.0;
-    double m_anomalyThreshold = 0.7;
+    double m_anomalyThreshold = 0.65;
 
     double isolationScore(const AnomalyFeatureVector& ev,
                            const QVector<AnomalyFeatureVector>& context) const;

@@ -1,7 +1,7 @@
 ﻿# SENTINEL â€” Crime Analytics & Predictive Threat Assessment System
 
 <p align="center">
-  <strong>C++23 Â· Qt 6 Â· SQLite Â· 251 passing tests</strong>
+  <strong>C++23 Â· Qt 6 Â· SQLite Â· 273 passing tests</strong>
 </p>
 
 > A fully auditable, standalone desktop application for spatiotemporal crime prediction, investigative lead generation, and anomaly detection. Every prediction is traceable to its data source, mathematical model, and quantified uncertainty. No proprietary APIs. No black-box AI.
@@ -249,7 +249,7 @@ sentinel/
 â”‚       â”œâ”€â”€ DebugConsoleWidget.h/cpp
 â”‚       â””â”€â”€ SettingsWidget.h/cpp
 â””â”€â”€ tests/
-    â”œâ”€â”€ CMakeLists.txt          # 251 test targets
+    â”œâ”€â”€ CMakeLists.txt          # 273 test targets
     â””â”€â”€ test_*.cpp              # Unit, integration, stress, and UI tests
 ```
 
@@ -302,7 +302,7 @@ cmake --build build -j$(nproc)
 
 ## Testing
 
-SENTINEL has **251 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
+SENTINEL has **273 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
 
 ```bash
 # Run all tests (parallel, 4 jobs)

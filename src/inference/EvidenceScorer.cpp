@@ -184,23 +184,15 @@ double EvidenceScorer::bayesFactor(double priorA, double priorB,
 {
     if (priorA <= 0.0 || priorB <= 0.0) return 1.0;
 
-    // Score both hypotheses
+    // Same evidence map → identical diagnostic LR for both hypotheses.
+    // BF = P(E|Ha)/P(E|Hb) = overallLR_A / overallLR_B (prior-independent).
+    // Use overall LR directly — the posterior-odds ratio loses precision when
+    // posteriors saturate near 1.0 under strong evidence (e.g. DNA LR=1e9).
     const auto resA = score(priorA, evidencePresence);
     const auto resB = score(priorB, evidencePresence);
 
-    // BF = (posteriorA / (1 - posteriorA)) / (posteriorB / (1 - posteriorB))
-    //      normalised by prior odds
-    const double postA = resA.posteriorProbability;
-    const double postB = resB.posteriorProbability;
-
-    const double postOddsA = postA / std::max(1.0 - postA, 1e-12);
-    const double postOddsB = postB / std::max(1.0 - postB, 1e-12);
-    const double priorOddsA = priorA / std::max(1.0 - priorA, 1e-12);
-    const double priorOddsB = priorB / std::max(1.0 - priorB, 1e-12);
-
-    // BF = (posterior odds A / prior odds A) / (posterior odds B / prior odds B)
-    const double lrA = postOddsA / std::max(priorOddsA, 1e-12);
-    const double lrB = postOddsB / std::max(priorOddsB, 1e-12);
+    const double lrA = resA.overallLikelihoodRatio;
+    const double lrB = resB.overallLikelihoodRatio;
 
     return (lrB > 1e-12) ? lrA / lrB : 1.0;
 }

@@ -321,6 +321,146 @@ private slots:
         const MOFeatures mo = m_ex.extract(QStringLiteral(""));
         QVERIFY(m_ex.canonicalMOString(mo).isEmpty());
     }
+
+    // ── Iteration-12 deep tests ──────────────────────────────────────────────
+
+    // "suspect entered through window with knife at 02:00"
+    // → weapon=knife, entry=window, time=early_morning
+    void testWindowWithKnifeAt0200()
+    {
+        const MOFeatures mo = m_ex.extract(
+            QStringLiteral("suspect entered through window with knife at 02:00"));
+
+        QVERIFY2(mo.weaponType.has_value(), "weapon should be detected from 'knife'");
+        QCOMPARE(*mo.weaponType, QStringLiteral("knife"));
+
+        QVERIFY2(mo.entryMethod.has_value(), "entry should be detected from 'window'");
+        QCOMPARE(*mo.entryMethod, QStringLiteral("window"));
+
+        QVERIFY2(mo.timeOfDay.has_value(), "time should be detected from '02:00' (24h)");
+        QCOMPARE(*mo.timeOfDay, QStringLiteral("early_morning"));
+    }
+
+    // window keyword must NOT override explicit forced_entry keywords
+    void testForcedEntryTakesPriorityOverWindow()
+    {
+        const MOFeatures mo = m_ex.extract(
+            QStringLiteral("the suspect smashed the window and forced entry"));
+        QVERIFY(mo.entryMethod.has_value());
+        QCOMPARE(*mo.entryMethod, QStringLiteral("forced_entry"));
+    }
+
+    // 24-hour time detection across all buckets
+    void testTime24hMorning()
+    {
+        const MOFeatures mo = m_ex.extract(QStringLiteral("incident at 08:30 near the school"));
+        QVERIFY2(mo.timeOfDay.has_value(), "08:30 should match morning");
+        QCOMPARE(*mo.timeOfDay, QStringLiteral("morning"));
+    }
+
+    void testTime24hAfternoon()
+    {
+        const MOFeatures mo = m_ex.extract(QStringLiteral("robbery reported at 14:15"));
+        QVERIFY2(mo.timeOfDay.has_value(), "14:15 should match afternoon");
+        QCOMPARE(*mo.timeOfDay, QStringLiteral("afternoon"));
+    }
+
+    void testTime24hEvening()
+    {
+        const MOFeatures mo = m_ex.extract(QStringLiteral("suspect seen at 19:45 leaving the area"));
+        QVERIFY2(mo.timeOfDay.has_value(), "19:45 should match evening");
+        QCOMPARE(*mo.timeOfDay, QStringLiteral("evening"));
+    }
+
+    void testTime24hNight()
+    {
+        const MOFeatures mo = m_ex.extract(QStringLiteral("vehicle stolen at 22:30"));
+        QVERIFY2(mo.timeOfDay.has_value(), "22:30 should match night");
+        QCOMPARE(*mo.timeOfDay, QStringLiteral("night"));
+    }
+
+    // Realistic full-narrative returns non-empty features
+    void testRealisticCrimeNarrativeNonEmpty()
+    {
+        const MOFeatures mo = m_ex.extract(
+            QStringLiteral("A lone male suspect forced entry into the residential property "
+                           "at approximately 3am using a crowbar. He stole cash, jewellery, "
+                           "and a laptop before leaving. He was wearing gloves and a mask."));
+
+        QVERIFY(mo.entryMethod.has_value());
+        QVERIFY(mo.targetType.has_value());
+        QVERIFY(mo.timeOfDay.has_value());
+        QVERIFY(mo.weaponType.has_value());
+        QVERIFY(!mo.itemsTaken.empty());
+        QVERIFY(mo.soloOrGroup.has_value());
+        QVERIFY(mo.precaution.has_value());
+    }
+
+    // All extracted feature values must come from the known vocabulary
+    void testFeatureValuesAreKnown()
+    {
+        static const QStringList knownEntry   = { "forced_entry", "unlocked", "deception",
+                                                   "tailgating", "window" };
+        static const QStringList knownTarget  = { "residential", "commercial", "vehicle", "person" };
+        static const QStringList knownTime    = { "early_morning", "morning", "afternoon",
+                                                   "evening", "night" };
+        static const QStringList knownWeapon  = { "firearm", "knife", "blunt", "other" };
+        static const QStringList knownVictim  = { "elderly", "child", "female", "male",
+                                                   "business", "vulnerable" };
+        static const QStringList knownGroup   = { "solo", "group" };
+        static const QStringList knownPrecaution = { "gloves", "mask", "balaclava" };
+
+        const QString narrative =
+            QStringLiteral("The group smashed windows at 02:00, used a knife to threaten an "
+                           "elderly man in the house. They stole cash and a watch. "
+                           "Two suspects wore gloves.");
+
+        const MOFeatures mo = m_ex.extract(narrative);
+
+        if (mo.entryMethod)
+            QVERIFY2(knownEntry.contains(*mo.entryMethod),
+                     qPrintable(QStringLiteral("Unknown entryMethod: %1").arg(*mo.entryMethod)));
+        if (mo.targetType)
+            QVERIFY2(knownTarget.contains(*mo.targetType),
+                     qPrintable(QStringLiteral("Unknown targetType: %1").arg(*mo.targetType)));
+        if (mo.timeOfDay)
+            QVERIFY2(knownTime.contains(*mo.timeOfDay),
+                     qPrintable(QStringLiteral("Unknown timeOfDay: %1").arg(*mo.timeOfDay)));
+        if (mo.weaponType)
+            QVERIFY2(knownWeapon.contains(*mo.weaponType),
+                     qPrintable(QStringLiteral("Unknown weaponType: %1").arg(*mo.weaponType)));
+        if (mo.victimProfile)
+            QVERIFY2(knownVictim.contains(*mo.victimProfile),
+                     qPrintable(QStringLiteral("Unknown victimProfile: %1").arg(*mo.victimProfile)));
+        if (mo.soloOrGroup)
+            QVERIFY2(knownGroup.contains(*mo.soloOrGroup),
+                     qPrintable(QStringLiteral("Unknown soloOrGroup: %1").arg(*mo.soloOrGroup)));
+        if (mo.precaution)
+            QVERIFY2(knownPrecaution.contains(*mo.precaution),
+                     qPrintable(QStringLiteral("Unknown precaution: %1").arg(*mo.precaution)));
+    }
+
+    // Random / nonsense text must not produce crashes and should not produce garbage features
+    void testNonsenseTextNoGarbage()
+    {
+        // Text containing no crime indicators
+        const MOFeatures mo = m_ex.extract(
+            QStringLiteral("xyzzy lorem ipsum delta sigma omega the quick brown fox"));
+        QVERIFY(!mo.entryMethod.has_value());
+        QVERIFY(!mo.weaponType.has_value());
+        QVERIFY(!mo.targetType.has_value());
+        QVERIFY(!mo.timeOfDay.has_value());
+        QVERIFY(mo.itemsTaken.empty());
+    }
+
+    // Null-like (whitespace-only) input must not crash
+    void testWhitespaceOnlyNoCrash()
+    {
+        const MOFeatures mo = m_ex.extract(QStringLiteral("   \t\n  "));
+        QVERIFY(!mo.entryMethod.has_value());
+        QVERIFY(!mo.weaponType.has_value());
+        QVERIFY(mo.itemsTaken.empty());
+    }
 };
 
 QTEST_GUILESS_MAIN(MOExtractorDeep2Test)

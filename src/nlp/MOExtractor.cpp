@@ -17,6 +17,8 @@ MOExtractor::MOExtractor()
         { "unlocked",     std::regex(R"(\b(unlocked|open|unsecured|left open)\b)",               ICASE) },
         { "deception",    std::regex(R"(\b(pretended|posed as|impersonated|tricked|deceived)\b)", ICASE) },
         { "tailgating",   std::regex(R"(\b(tailgated|followed|piggybacked)\b)",                  ICASE) },
+        // Window entry: checked last so explicit forced/unlocked keywords take precedence
+        { "window",       std::regex(R"(\b(window)\b)",                                          ICASE) },
     };
 
     // Target type patterns
@@ -27,13 +29,14 @@ MOExtractor::MOExtractor()
         { "person",      std::regex(R"(\b(person|pedestrian|victim|woman|man|child|individual)\b)",        ICASE) },
     };
 
-    // Time-of-day patterns
+    // Time-of-day patterns — support both am/pm and 24-hour (HH:MM) formats.
+    // 24h ranges: early_morning 00-05, morning 06-11, afternoon 12-17, evening 18-21, night 22-23.
     m_timePatterns = {
-        { "early_morning", std::regex(R"(\b(1am|2am|3am|4am|5am|early morning|overnight|before dawn)\b)", ICASE) },
-        { "morning",       std::regex(R"(\b(6am|7am|8am|9am|10am|11am|morning)\b)",                       ICASE) },
-        { "afternoon",     std::regex(R"(\b(12pm|1pm|2pm|3pm|4pm|5pm|afternoon|midday)\b)",               ICASE) },
-        { "evening",       std::regex(R"(\b(6pm|7pm|8pm|9pm|evening|dusk|sunset)\b)",                     ICASE) },
-        { "night",         std::regex(R"(\b(10pm|11pm|midnight|night|dark|late night)\b)",                 ICASE) },
+        { "early_morning", std::regex(R"(\b(1am|2am|3am|4am|5am|early morning|overnight|before dawn|0[0-5]:\d{2})\b)", ICASE) },
+        { "morning",       std::regex(R"(\b(6am|7am|8am|9am|10am|11am|morning|0[6-9]:\d{2}|1[01]:\d{2})\b)",          ICASE) },
+        { "afternoon",     std::regex(R"(\b(12pm|1pm|2pm|3pm|4pm|5pm|afternoon|midday|1[2-7]:\d{2})\b)",              ICASE) },
+        { "evening",       std::regex(R"(\b(6pm|7pm|8pm|9pm|evening|dusk|sunset|1[89]:\d{2}|2[01]:\d{2})\b)",        ICASE) },
+        { "night",         std::regex(R"(\b(10pm|11pm|midnight|night|dark|late night|2[23]:\d{2})\b)",                 ICASE) },
     };
 
     // Weapon patterns

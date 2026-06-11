@@ -300,7 +300,8 @@ void LeadsWidget::setLeads(const QVector<InvestigativeLead>& leads, const QStrin
     m_currentEventId = forEventId;
     m_leadsList->clear();
 
-    for (const InvestigativeLead& lead : m_leads) {
+    for (int i = 0; i < m_leads.size(); ++i) {
+        const InvestigativeLead& lead = m_leads[i];
         const QString icon  = categoryIcon(lead.category);
         const QString bar   = confidenceBar(lead.confidence);
         const QString label = QString("#%1  %2  %3\n%4  %5%")
@@ -321,7 +322,7 @@ void LeadsWidget::setLeads(const QVector<InvestigativeLead>& leads, const QStrin
         else
             item->setForeground(QColor("#e57373"));
 
-        item->setData(Qt::UserRole, static_cast<int>(&lead - &m_leads.first()));
+        item->setData(Qt::UserRole, i);
     }
 
     m_countLabel->setText(QString("%1 lead%2").arg(m_leads.size()).arg(m_leads.size() == 1 ? "" : "s"));

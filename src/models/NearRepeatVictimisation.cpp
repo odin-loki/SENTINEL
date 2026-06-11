@@ -16,14 +16,14 @@ NearRepeatVictimisation::NearRepeatVictimisation(double bandwidthM, double windo
 
 double NearRepeatVictimisation::spatialDecay(double distM, double bandwidthM)
 {
-    if (bandwidthM <= 0.0) return 0.0;
-    return std::max(0.0, 1.0 - distM / bandwidthM);
+    if (bandwidthM <= 0.0 || distM > bandwidthM) return 0.0;
+    return std::exp(-distM / bandwidthM);
 }
 
 double NearRepeatVictimisation::temporalDecay(double dtDays, double windowDays)
 {
-    if (windowDays <= 0.0) return 0.0;
-    return std::max(0.0, 1.0 - dtDays / windowDays);
+    if (windowDays <= 0.0 || dtDays > windowDays) return 0.0;
+    return std::exp(-dtDays / windowDays);
 }
 
 double NearRepeatVictimisation::alertScore(double spatialDistanceM,

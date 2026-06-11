@@ -172,18 +172,24 @@ private slots:
         QCOMPARE(nrv.alertScore(0.0, 0.0), 1.0);
     }
 
-    // alertScore at exactly the bandwidth boundary: spatialDecay = 0 → score = 0
+    // alertScore at exactly the bandwidth boundary: spatialDecay = exp(-1)
     void testAlertScoreZeroAtBandwidthBoundary()
     {
         NearRepeatVictimisation nrv(200.0, 14.0);
-        QCOMPARE(nrv.alertScore(200.0, 0.0), 0.0);
+        const double expected = std::exp(-1.0);
+        QVERIFY2(std::abs(nrv.alertScore(200.0, 0.0) - expected) < 1e-9,
+                 qPrintable(QString("Expected exp(-1)=%1 at bandwidth boundary")
+                            .arg(expected)));
     }
 
-    // alertScore at exactly the window boundary: temporalDecay = 0 → score = 0
+    // alertScore at exactly the window boundary: temporalDecay = exp(-1)
     void testAlertScoreZeroAtWindowBoundary()
     {
         NearRepeatVictimisation nrv(200.0, 14.0);
-        QCOMPARE(nrv.alertScore(0.0, 14.0), 0.0);
+        const double expected = std::exp(-1.0);
+        QVERIFY2(std::abs(nrv.alertScore(0.0, 14.0) - expected) < 1e-9,
+                 qPrintable(QString("Expected exp(-1)=%1 at window boundary")
+                            .arg(expected)));
     }
 
     // alertScore strictly decreases with distance and with time

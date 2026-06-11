@@ -31,6 +31,13 @@ DashboardWidget::DashboardWidget(std::shared_ptr<Database> db, AppConfig& cfg, Q
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+void DashboardWidget::setEventCount(int count)
+{
+    if (m_totalEventsLabel)
+        m_totalEventsLabel->setText(QString::number(count));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 void DashboardWidget::setupUI()
 {
     setStyleSheet(R"(
@@ -308,6 +315,8 @@ void DashboardWidget::refresh()
         if (!topType.isEmpty())
             topType[0] = topType[0].toUpper();
         m_topCrimeTypeLabel->setText(topType.isEmpty() ? "—" : topType);
+    } else if (m_topCrimeTypeLabel) {
+        m_topCrimeTypeLabel->setText("—");
     }
 
     // ── Crime type distribution table ────────────────────────────────────────

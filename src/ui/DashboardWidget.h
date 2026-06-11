@@ -16,6 +16,7 @@ class DashboardWidget : public QWidget {
 public:
     DashboardWidget(std::shared_ptr<Database> db, AppConfig& cfg, QWidget* parent = nullptr);
     void refresh();
+    void setEventCount(int count);
 
 private:
     void setupUI();
