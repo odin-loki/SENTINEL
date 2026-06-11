@@ -35,6 +35,8 @@ void RiskForecaster::fit(const QVector<CrimeEvent>& events, const QString& crime
     // Build Poisson records and recent-count index (last 30 days)
     QVector<PoissonBaseline::EventRecord> records;
     for (const auto& e : events) {
+        if (!crimeType.isEmpty() && e.crimeType != crimeType)
+            continue;
         const QString zone = e.suburb.isEmpty() ? e.lga.value_or("unknown") : e.suburb;
         const QDateTime dt = e.occurredAt.value_or(e.timestamp);
         records.append({zone, dt, e.crimeType});

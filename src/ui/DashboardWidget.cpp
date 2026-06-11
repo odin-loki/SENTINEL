@@ -418,7 +418,11 @@ void DashboardWidget::refreshRiskPanel(const QVector<CrimeEvent>& events)
 
     if (events.isEmpty()) return;
 
-    RiskForecaster forecaster(7);
+    const int horizon = m_cfg.forecastHorizonDays > 0 ? m_cfg.forecastHorizonDays : 7;
+    RiskForecaster forecaster(horizon);
+    forecaster.setAlertThresholds(m_cfg.alertElevated,
+                                  m_cfg.alertHigh,
+                                  m_cfg.alertCritical);
     forecaster.fit(events);
     if (!forecaster.isFitted()) return;
 

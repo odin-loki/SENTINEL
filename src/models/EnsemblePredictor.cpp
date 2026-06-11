@@ -204,7 +204,10 @@ EnsemblePrediction EnsemblePredictor::predict(
     result.calibrated = m_calibrated && (havePoi || haveHawks);
 
     // 95% confidence interval on probCrime using combined uncertainty
-    {
+    if (!havePoi && !haveHawks) {
+        result.ciLow95  = 0.0;
+        result.ciHigh95 = 0.0;
+    } else {
         const double sigma = std::sqrt(
             result.uncertaintyAleatoric * result.uncertaintyAleatoric +
             result.uncertaintyEpistemic * result.uncertaintyEpistemic);
