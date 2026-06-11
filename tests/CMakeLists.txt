@@ -220,6 +220,9 @@ set_tests_properties(test_csv_importer_deep PROPERTIES TIMEOUT 30)
 sentinel_test(test_temporal_features_deep                 test_temporal_features_deep.cpp)
 set_tests_properties(test_temporal_features_deep PROPERTIES TIMEOUT 30)
 
+sentinel_test(export_temporal_deep test_export_temporal_deep.cpp)
+set_tests_properties(export_temporal_deep PROPERTIES TIMEOUT 30)
+
 sentinel_test(test_ensemble_weights                       test_ensemble_weights.cpp)
 set_tests_properties(test_ensemble_weights PROPERTIES TIMEOUT 30)
 
@@ -337,6 +340,9 @@ set_tests_properties(test_uk_police_source_deep PROPERTIES TIMEOUT 30)
 sentinel_test(ingest_comprehensive                        test_ingest_comprehensive.cpp)
 set_tests_properties(ingest_comprehensive PROPERTIES TIMEOUT 30)
 
+sentinel_test(ingest_deep                                 test_ingest_deep.cpp)
+set_tests_properties(ingest_deep PROPERTIES TIMEOUT 30)
+
 sentinel_test(test_anomaly_edge_cases                     test_anomaly_edge_cases.cpp)
 set_tests_properties(test_anomaly_edge_cases PROPERTIES TIMEOUT 30)
 
@@ -390,6 +396,7 @@ sentinel_test(test_source_parsing        test_source_parsing.cpp)
 sentinel_test(test_csv_importer          test_csv_importer.cpp)
 sentinel_test(test_temporal_features     test_temporal_features.cpp)
 sentinel_test(test_series_detector_deep   test_series_detector_deep.cpp)
+sentinel_test(series_cooffend_deep         test_series_cooffend_deep.cpp)
 sentinel_test(test_poisson_overdispersion test_poisson_overdispersion.cpp)
 sentinel_test(test_temporal_features_advanced test_temporal_features_advanced.cpp)
 sentinel_test(test_sentinel_logger_advanced   test_sentinel_logger_advanced.cpp)
@@ -505,6 +512,9 @@ set_tests_properties(test_calibration_bias_improvements PROPERTIES TIMEOUT 30)
 
 sentinel_test(benchmark_calibration_deep test_benchmark_calibration_deep.cpp)
 set_tests_properties(benchmark_calibration_deep PROPERTIES TIMEOUT 30)
+
+sentinel_test(appconfig_benchmark_deep test_appconfig_benchmark_deep.cpp)
+set_tests_properties(appconfig_benchmark_deep PROPERTIES TIMEOUT 30)
 
 sentinel_test(test_ensemble_predictor_deep  test_ensemble_predictor_deep.cpp)
 set_tests_properties(test_ensemble_predictor_deep PROPERTIES TIMEOUT 60)

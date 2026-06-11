@@ -19,6 +19,7 @@ enable_testing()
 # Both the application and unit tests link against this.
 # ─────────────────────────────────────────────────────────────────────────────
 set(CORE_SOURCES
+    src/core/AppConfig.cpp
     src/core/Database.cpp
     src/core/SentinelLogger.cpp
     src/core/DataExporter.cpp

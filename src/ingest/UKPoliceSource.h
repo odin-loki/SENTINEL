@@ -6,6 +6,7 @@
 #include <QQueue>
 #include <QMap>
 #include <QVector>
+#include <QUrl>
 
 class UKPoliceSource : public DataSource {
     Q_OBJECT
@@ -23,6 +24,13 @@ public:
 
     // Expose JSON parsing for testing without network access
     CrimeEvent parseRecord(const QJsonObject& raw) const { return parseRawEvent(raw); }
+
+    // Known UK Police API crime categories (mapped to internal types)
+    QStringList availableCategories() const;
+
+    // Build a crimes-street request URL (exposed for offline URL tests)
+    static QUrl buildFetchUrl(double lat, double lon, const QString& yyyyMm,
+                              const QString& category = QStringLiteral("all-crime"));
 
 private slots:
     void onReplyFinished(QNetworkReply* reply);

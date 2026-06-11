@@ -217,6 +217,24 @@ double BenchmarkMetrics::brierScore(const QVector<double>& yTrue,
     return sum / n;
 }
 
+// ─── Log Loss ────────────────────────────────────────────────────────────────
+
+double BenchmarkMetrics::logLoss(const QVector<double>& yTrue,
+                                  const QVector<double>& yPred)
+{
+    const int n = yTrue.size();
+    if (n == 0 || yPred.size() != n) return 0.0;
+
+    constexpr double eps = 1e-15;
+    double sum = 0.0;
+    for (int i = 0; i < n; ++i) {
+        const double p = std::clamp(yPred[i], eps, 1.0 - eps);
+        const double y = yTrue[i];
+        sum += y * std::log(p) + (1.0 - y) * std::log(1.0 - p);
+    }
+    return -sum / n;
+}
+
 // ─── Full Report ─────────────────────────────────────────────────────────────
 
 BenchmarkReport BenchmarkMetrics::fullReport(const QVector<double>& yTrue,

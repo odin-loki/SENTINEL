@@ -5,6 +5,7 @@
 #include <QString>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QJsonObject>
 #include <algorithm>
 
 struct AppConfig {
@@ -48,8 +49,12 @@ struct AppConfig {
     double ensemblePoissonWeight = 0.5;
     double ensembleHawkesWeight  = 0.5;
 
-    // Database
-    QString databasePath;               // resolved on first load
+    // Spatial grid resolution for model surfaces
+    int poissonGridSize = 50;   // valid: [10, 500]
+    int kdeGridSize     = 50;   // valid: [10, 500]
+
+    // Database (":memory:" used when empty — safe for tests and first launch)
+    QString databasePath = ":memory:";
 
     // UI preferences
     QString theme            = "dark";  // "dark" or "light"
@@ -88,35 +93,14 @@ struct AppConfig {
                        + "/sentinel.db";
     }
 
-    // ── Validate parameter ranges; returns false if any value is out of range ─
-    bool validate() const {
-        if (defaultLat < -90.0 || defaultLat > 90.0)   return false;
-        if (defaultLon < -180.0 || defaultLon > 180.0)   return false;
-        if (defaultRadius <= 0.0)                        return false;
-        if (hawkesHistoryDays < 7 || hawkesHistoryDays > 365) return false;
-        if (seriesMinEvents < 2)                         return false;
-        if (seriesEpsKm <= 0.0)                          return false;
-        if (seriesEpsDays <= 0.0)                        return false;
-        if (qualityThreshold < 0.0 || qualityThreshold > 1.0) return false;
-        if (alertElevated < 0.0 || alertElevated > 1.0)  return false;
-        if (alertHigh < 0.0 || alertHigh > 1.0)          return false;
-        if (alertCritical < 0.0 || alertCritical > 1.0)  return false;
-        if (alertElevated >= alertHigh)                  return false;
-        if (alertHigh >= alertCritical)                  return false;
-        if (forecastHorizonDays < 1 || forecastHorizonDays > 30) return false;
-        if (gpSigma2 <= 0.0 || gpSigma2 > 100.0)         return false;
-        if (gpLengthscale <= 0.0 || gpLengthscale > 10.0) return false;
-        if (gpNoiseSigma2 <= 0.0 || gpNoiseSigma2 > 10.0) return false;
-        if (rossmoF <= 0.0 || rossmoF > 3.0)             return false;
-        if (rossmoG <= 0.0 || rossmoG > 3.0)             return false;
-        if (ensemblePoissonWeight < 0.0 || ensemblePoissonWeight > 1.0) return false;
-        if (ensembleHawkesWeight < 0.0 || ensembleHawkesWeight > 1.0)   return false;
-        if (refreshIntervalSeconds < 10)               return false;
-        if (mapZoomLevel < 1.0 || mapZoomLevel > 20.0) return false;
-        if (maxLeadCount < 1 || maxLeadCount > 10000)  return false;
-        if (databasePath.trimmed().isEmpty())            return false;
-        return true;
-    }
+    // ── JSON serialisation (round-trip via saveToFile / loadFromFile) ─────────
+    QJsonObject toJson() const;
+    static AppConfig fromJson(const QJsonObject& obj);
+    bool saveToFile(const QString& path) const;
+    bool loadFromFile(const QString& path);
+
+    // ── Clamp parameters to valid ranges; returns true if already valid ───────
+    bool validate();
 
 private:
     static AppConfig loadFrom(QSettings& settings) {
@@ -154,6 +138,8 @@ private:
         c.mapZoomLevel    = std::clamp(settings.value("ui/map_zoom_level", 14.0).toDouble(), 1.0, 20.0);
         c.exportDirectory = settings.value("ui/export_directory", "").toString();
         c.maxLeadCount    = std::clamp(settings.value("ui/max_lead_count", 50).toInt(), 1, 10000);
+        c.poissonGridSize = std::clamp(settings.value("model/poisson_grid_size", 50).toInt(), 10, 500);
+        c.kdeGridSize     = std::clamp(settings.value("model/kde_grid_size", 50).toInt(), 10, 500);
         return c;
     }
 
@@ -188,6 +174,8 @@ private:
         settings.setValue("ui/map_zoom_level",   mapZoomLevel);
         settings.setValue("ui/export_directory", exportDirectory);
         settings.setValue("ui/max_lead_count",   maxLeadCount);
+        settings.setValue("model/poisson_grid_size", poissonGridSize);
+        settings.setValue("model/kde_grid_size",     kdeGridSize);
         settings.sync();
     }
 };

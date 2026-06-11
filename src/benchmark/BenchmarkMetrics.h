@@ -65,6 +65,9 @@ public:
     static double brierScore(const QVector<double>& yTrue,
                               const QVector<double>& yPred);
 
+    static double logLoss(const QVector<double>& yTrue,
+                          const QVector<double>& yPred);
+
     // Full benchmark report
     static BenchmarkReport fullReport(const QVector<double>& yTrue,
                                       const QVector<double>& yPred);

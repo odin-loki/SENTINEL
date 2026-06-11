@@ -131,6 +131,18 @@ QVector<CrimeSeries> SeriesDetector::detectSeries(
 {
     if (events.isEmpty()) return {};
 
+    // Deduplicate by eventId — keep first occurrence, skip later duplicates
+    QVector<SeriesEvent> uniqueEvents;
+    uniqueEvents.reserve(events.size());
+    QSet<QString> seenIds;
+    for (const auto& ev : events) {
+        if (!ev.eventId.isEmpty() && seenIds.contains(ev.eventId))
+            continue;
+        if (!ev.eventId.isEmpty())
+            seenIds.insert(ev.eventId);
+        uniqueEvents.append(ev);
+    }
+
     // Convert to normalised 3D feature space:
     //   x = lat_deg  (spatial)
     //   y = lon_deg  (spatial)
@@ -143,8 +155,8 @@ QVector<CrimeSeries> SeriesDetector::detectSeries(
     double zScale    = (m_epsDays > 0.0) ? (epsDeg / m_epsDays) : 1.0;
 
     QVector<std::array<double, 3>> pts;
-    pts.reserve(events.size());
-    for (const auto& ev : events) {
+    pts.reserve(uniqueEvents.size());
+    for (const auto& ev : uniqueEvents) {
         pts.append({ ev.lat, ev.lon, ev.tDays * zScale });
     }
 
@@ -171,7 +183,7 @@ QVector<CrimeSeries> SeriesDetector::detectSeries(
         QMap<QString, int> typeCounts;
 
         for (int idx : idxs) {
-            const SeriesEvent& ev = events[idx];
+            const SeriesEvent& ev = uniqueEvents[idx];
             series.members.append(ev);
             sumLat += ev.lat;
             sumLon += ev.lon;
@@ -179,6 +191,11 @@ QVector<CrimeSeries> SeriesDetector::detectSeries(
             maxT = std::max(maxT, ev.tDays);
             typeCounts[ev.crimeType]++;
         }
+
+        std::sort(series.members.begin(), series.members.end(),
+                  [](const SeriesEvent& a, const SeriesEvent& b) {
+                      return a.tDays < b.tDays;
+                  });
 
         series.centroidLat = sumLat / idxs.size();
         series.centroidLon = sumLon / idxs.size();
@@ -198,7 +215,7 @@ QVector<CrimeSeries> SeriesDetector::detectSeries(
     }
 
     qCInfo(lcModels) << "Series detection found" << result.size() << "series from"
-                     << events.size() << "events";
+                     << uniqueEvents.size() << "events";
     return result;
 }
 

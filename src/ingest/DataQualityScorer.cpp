@@ -11,8 +11,11 @@ QMap<QString, double> DataQualityScorer::defaultReliabilityMap()
 {
     return {
         { QStringLiteral("uk_police_v1"),  0.90 },   // Official UK Police Open Data API
+        { QStringLiteral("uk_police"),     0.90 },   // Alias for uk_police_v1
         { QStringLiteral("open_meteo"),    0.85 },   // Open-Meteo free weather service
+        { QStringLiteral("weather"),       0.85 },   // Alias for open_meteo
         { QStringLiteral("csv_import"),    0.60 },   // Local CSV — quality depends on source
+        { QStringLiteral("csv"),           0.60 },   // Alias for csv_import
         { QStringLiteral("chicago_pd"),    0.85 },   // Chicago PD open data portal
         { QStringLiteral("nypd"),          0.85 },   // NYPD open data portal
         { QStringLiteral("lapd"),          0.80 },   // LAPD open data portal
@@ -31,6 +34,27 @@ DataQualityScorer DataQualityScorer::withDefaults()
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+static std::optional<double> effectiveLat(const CrimeEvent& e)
+{
+    if (e.lat.has_value()) return e.lat;
+    if (std::abs(e.latitude) > 1e-9) return e.latitude;
+    return std::nullopt;
+}
+
+static std::optional<double> effectiveLon(const CrimeEvent& e)
+{
+    if (e.lon.has_value()) return e.lon;
+    if (std::abs(e.longitude) > 1e-9) return e.longitude;
+    return std::nullopt;
+}
+
+static bool hasLocationText(const CrimeEvent& e)
+{
+    if (e.locationRaw.has_value() && !e.locationRaw->isEmpty()) return true;
+    if (e.addressNormalised.has_value() && !e.addressNormalised->isEmpty()) return true;
+    return !e.suburb.isEmpty();
+}
 
 // Count significant decimal places of a double value (up to 6).
 // e.g. 51.5074 -> 4,  0.0 -> 0,  -0.1278 -> 4,  51.5 -> 1
@@ -66,16 +90,18 @@ double DataQualityScorer::completenessScore(const CrimeEvent& e) const
         ++passed;
 
     // 2. lat and lon both present and non-zero
-    if (e.lat.has_value() && e.lon.has_value() &&
-        std::abs(*e.lat) > 1e-9 && std::abs(*e.lon) > 1e-9)
+    const auto lat = effectiveLat(e);
+    const auto lon = effectiveLon(e);
+    if (lat.has_value() && lon.has_value() &&
+        std::abs(*lat) > 1e-9 && std::abs(*lon) > 1e-9)
         ++passed;
 
     // 3. crimeType non-empty
     if (!e.crimeType.isEmpty())
         ++passed;
 
-    // 4. locationRaw non-empty
-    if (e.locationRaw.has_value() && !e.locationRaw->isEmpty())
+    // 4. location text present (raw, normalised, or suburb)
+    if (hasLocationText(e))
         ++passed;
 
     return passed / 4.0;
@@ -121,11 +147,13 @@ double DataQualityScorer::temporalPrecisionScore(const CrimeEvent& e) const
 
 QString DataQualityScorer::spatialPrecisionLabel(const CrimeEvent& e) const
 {
-    if (!e.lat.has_value() || !e.lon.has_value())
+    const auto latOpt = effectiveLat(e);
+    const auto lonOpt = effectiveLon(e);
+    if (!latOpt.has_value() || !lonOpt.has_value())
         return QStringLiteral("unknown");
 
-    const double lat = *e.lat;
-    const double lon = *e.lon;
+    const double lat = *latOpt;
+    const double lon = *lonOpt;
 
     if (std::abs(lat) < 1e-9 && std::abs(lon) < 1e-9)
         return QStringLiteral("unknown");
@@ -165,11 +193,12 @@ QualityReport DataQualityScorer::score(const CrimeEvent& event) const
     report.sourceReliability =
         m_sourceReliability.value(event.source, 0.5);
 
-    report.compositeScore =
+    report.compositeScore = std::clamp(
         0.30 * report.completeness +
         0.20 * temporalPrecisionScore(event) +
         0.20 * spatialPrecisionScore(event) +
-        0.30 * report.sourceReliability;
+        0.30 * report.sourceReliability,
+        0.0, 1.0);
 
     report.quarantined = (report.compositeScore < QUARANTINE_THRESHOLD);
 

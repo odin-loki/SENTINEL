@@ -37,6 +37,7 @@ CalibrationResult CalibrationAnalyser::analyse(
 
     const double n = static_cast<double>(res.nSamples);
     double ece = 0.0, ace = 0.0, mce = 0.0;
+    int populatedBins = 0;
 
     for (int b = 0; b < m_nBins; ++b) {
         CalibrationBin bin;
@@ -45,18 +46,18 @@ CalibrationResult CalibrationAnalyser::analyse(
         bin.fraction = cnt[b] / n;
 
         if (cnt[b] > 0) {
-            bin.avgPred   = sumPred[b] / cnt[b];
-            bin.empirical = sumAct [b] / cnt[b];
+            bin.avgPred   = sumPred[b] / static_cast<double>(cnt[b]);
+            bin.empirical = sumAct [b] / static_cast<double>(cnt[b]);
+            bin.error     = std::abs(bin.avgPred - bin.empirical);
+            ece += bin.fraction * bin.error;
+            ace += bin.error;
+            mce  = std::max(mce, bin.error);
+            ++populatedBins;
         }
-        bin.error = std::abs(bin.avgPred - bin.empirical);
-
-        ece += bin.fraction * bin.error;
-        ace += bin.error;
-        mce  = std::max(mce, bin.error);
 
         res.bins.append(bin);
     }
-    ace /= m_nBins;
+    ace = populatedBins > 0 ? ace / populatedBins : 0.0;
 
     res.ece = ece;
     res.ace = ace;

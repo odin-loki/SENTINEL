@@ -61,13 +61,8 @@ void UKPoliceSource::fetchSince(const QDateTime& since)
 
     QDate cursor = QDate(startDate.year(), startDate.month(), 1);
     while (cursor <= endDate) {
-        QUrl url(BASE_URL + QStringLiteral("/crimes-street/all-crime"));
-        QUrlQuery query;
-        query.addQueryItem(QStringLiteral("lat"),   QString::number(m_lat,  'f', 6));
-        query.addQueryItem(QStringLiteral("lng"),   QString::number(m_lon,  'f', 6));
-        query.addQueryItem(QStringLiteral("date"),  cursor.toString(QStringLiteral("yyyy-MM")));
-        url.setQuery(query);
-        m_pendingUrls.enqueue(url);
+        m_pendingUrls.enqueue(
+            buildFetchUrl(m_lat, m_lon, cursor.toString(QStringLiteral("yyyy-MM"))));
         cursor = cursor.addMonths(1);
     }
 
@@ -227,6 +222,23 @@ QVector<CrimeEvent> UKPoliceSource::fetchSync(const QDateTime& since, int timeou
     disconnect(connErr);
 
     return collected;
+}
+
+QStringList UKPoliceSource::availableCategories() const
+{
+    return CRIME_TYPE_MAP.keys();
+}
+
+QUrl UKPoliceSource::buildFetchUrl(double lat, double lon, const QString& yyyyMm,
+                                   const QString& category)
+{
+    QUrl url(BASE_URL + QStringLiteral("/crimes-street/") + category);
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("lat"),  QString::number(lat, 'f', 6));
+    query.addQueryItem(QStringLiteral("lng"),  QString::number(lon, 'f', 6));
+    query.addQueryItem(QStringLiteral("date"), yyyyMm);
+    url.setQuery(query);
+    return url;
 }
 
 bool UKPoliceSource::healthCheck()

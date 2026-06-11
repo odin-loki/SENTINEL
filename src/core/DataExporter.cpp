@@ -13,7 +13,8 @@ QString DataExporter::escapeCsv(const QString& field)
 {
     if (field.contains(QLatin1Char(',')) ||
         field.contains(QLatin1Char('"')) ||
-        field.contains(QLatin1Char('\n'))) {
+        field.contains(QLatin1Char('\n')) ||
+        field.contains(QLatin1Char('\r'))) {
         return QLatin1Char('"') +
                QString(field).replace(QLatin1Char('"'), QStringLiteral("\"\"")) +
                QLatin1Char('"');

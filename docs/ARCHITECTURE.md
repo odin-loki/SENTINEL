@@ -237,11 +237,12 @@ In-memory mode (`:memory:`) used in all tests.
 Runtime configuration struct with `QSettings` persistence. All model parameters are editable at runtime via `SettingsWidget`.
 
 Key parameter groups:
-- **Pipeline**: Hawkes history window, DBSCAN epsilon (km, days, MO weight)
-- **Alerts**: Elevated/High/Critical probability thresholds
-- **GP**: σ², lengthscale, noise σ²
-- **Ensemble**: Poisson/Hawkes weight ratio
-- **UI**: Map zoom, max lead count, theme
+- **Pipeline**: `hawkesHistoryDays` ∈ [7, 3650], DBSCAN epsilon (km, days, MO weight)
+- **Alerts**: Elevated/High/Critical probability thresholds (must be strictly ordered)
+- **GP**: σ² ∈ (0, 100], lengthscale ∈ (0, 10], noise σ² ∈ (0, 10]
+- **Ensemble**: Poisson/Hawkes weight ratio ∈ [0, 1]
+- **UI**: map zoom, max lead count, theme
+- **Database**: `databasePath` defaults to `":memory:"` (in-process testing); production uses `AppDataLocation/sentinel.db`
 
 ---
 
