@@ -16,11 +16,12 @@ Non-homogeneous Poisson process with historical rates per bucket key `zone|hour|
 ### Key Output: `PoissonPrediction`
 ```cpp
 struct PoissonPrediction {
-    double meanRate;          // λ (expected count per window)
-    double probAtLeastOne;    // P(X ≥ 1) = 1 - P(X = 0)
-    double lowerCI;           // 5th percentile
-    double upperCI;           // 95th percentile
-    bool overdispersed;
+    double lambda;                        // λ (expected count per window)
+    double probAtLeastOne;                // P(X ≥ 1) = 1 - exp(-λ)
+    double expectedCount;                 // E[N]
+    std::pair<double,double> ci90;        // (5th, 95th) percentile on count
+    int    nObservations;                 // number of training windows
+    QString model;                        // "poisson" | "negative_binomial"
 };
 ```
 
@@ -75,11 +76,14 @@ Identify crime series — clusters of events likely committed by the same offend
 ### Key Output: `SeriesMatch`
 ```cpp
 struct SeriesMatch {
-    int seriesId;
-    double linkProbability;   // [0,1]
-    double compositeScore;
-    int memberCount;
-    QString crimeType;
+    QString seriesId;            // cluster identifier
+    int     memberCount;         // events in this cluster
+    double  linkProbability;     // [0,1] — logistic(compositeScore)
+    double  spatialDistanceM;    // metres from query event
+    double  temporalDistanceDays;
+    double  moSimilarity;        // Jaccard [0,1]
+    double  compositeScore;
+    QString method;              // "dbscan_3d"
 };
 ```
 
@@ -176,10 +180,15 @@ Yₖ | λₖ ~ Poisson(λₖ · Eₖ)
 ### Key Output: `ZonePosterior`
 ```cpp
 struct ZonePosterior {
-    QString zone;
-    double postAlpha, postBeta;
-    double postMean;
-    double credLower95, credUpper95;  // 95% CI
+    QString zoneId;
+    double  alphaPrior, betaPrior;    // hyperprior parameters
+    double  alphaPost,  betaPost;     // posterior parameters
+    double  posteriorMean;            // E[λ|data] = alphaPost / betaPost
+    double  posteriorVar;             // Var[λ|data]
+    double  credibleLow;              // 5th percentile (Wilson-Hilferty approx)
+    double  credibleHigh;             // 95th percentile
+    int     observedCount;
+    double  exposure;                 // training window (days)
 };
 ```
 
@@ -231,11 +240,16 @@ Combine Poisson and Hawkes predictions into a single calibrated forecast with un
 ### Key Output: `EnsemblePrediction`
 ```cpp
 struct EnsemblePrediction {
-    double probability;
-    double lowerCI, upperCI;
-    double aleatoricUncertainty;
-    double epistemicUncertainty;
-    QString dominantModel;
+    double probCrime;              // P(≥1 crime) [0,1], post-calibration
+    double expectedCount;          // E[N]
+    QPair<double,double> ci90;     // 90% CI on count
+    double ciLow95, ciHigh95;      // 95% CI on probCrime
+    double uncertaintyAleatoric;   // irreducible randomness (CI width / 3.29)
+    double uncertaintyEpistemic;   // model disagreement |p_poi - p_hawk| / 2
+    double poissonWeight;          // Poisson contribution fraction [0,1]
+    double hawkesWeight;           // Hawkes contribution fraction [0,1]
+    bool   calibrated;             // true if isotonic calibration applied
+    QString dominantModel;         // "poisson" | "hawkes" | "equal"
 };
 ```
 

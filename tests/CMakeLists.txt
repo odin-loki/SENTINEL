@@ -152,6 +152,8 @@ sentinel_test(test_data_exporter_html test_data_exporter_html.cpp)
 set_tests_properties(test_data_exporter_html PROPERTIES TIMEOUT 30)
 
 sentinel_test(test_nlp_murder_sexual            test_nlp_murder_sexual.cpp)
+sentinel_test(nlp_comprehensive                test_nlp_comprehensive.cpp)
+set_tests_properties(nlp_comprehensive PROPERTIES TIMEOUT 30)
 sentinel_test(test_mo_analyser_accuracy         test_mo_analyser_accuracy.cpp)
 sentinel_test(test_geographic_profiler_accuracy test_geographic_profiler_accuracy.cpp)
 set_tests_properties(test_geographic_profiler_accuracy PROPERTIES TIMEOUT 30)
@@ -324,8 +326,14 @@ set_tests_properties(test_crime_classifier_multilabel PROPERTIES TIMEOUT 30)
 sentinel_test(test_uk_police_source_deep                  test_uk_police_source_deep.cpp)
 set_tests_properties(test_uk_police_source_deep PROPERTIES TIMEOUT 30)
 
+sentinel_test(ingest_comprehensive                        test_ingest_comprehensive.cpp)
+set_tests_properties(ingest_comprehensive PROPERTIES TIMEOUT 30)
+
 sentinel_test(test_anomaly_edge_cases                     test_anomaly_edge_cases.cpp)
 set_tests_properties(test_anomaly_edge_cases PROPERTIES TIMEOUT 30)
+
+sentinel_test(inference_comprehensive                     test_inference_comprehensive.cpp)
+set_tests_properties(inference_comprehensive PROPERTIES TIMEOUT 30)
 
 
 sentinel_test(test_csv_real_data  test_csv_real_data.cpp)
@@ -486,6 +494,9 @@ set_tests_properties(test_calibration_bias_improvements PROPERTIES TIMEOUT 30)
 sentinel_test(test_ensemble_predictor_deep  test_ensemble_predictor_deep.cpp)
 set_tests_properties(test_ensemble_predictor_deep PROPERTIES TIMEOUT 60)
 
+sentinel_test(models_edge_cases test_models_edge_cases.cpp)
+set_tests_properties(models_edge_cases PROPERTIES TIMEOUT 60)
+
 sentinel_test(test_gp_regression_deep2      test_gp_regression_deep2.cpp)
 set_tests_properties(test_gp_regression_deep2 PROPERTIES TIMEOUT 60)
 
@@ -625,3 +636,36 @@ set_tests_properties(test_settings_widget_headless PROPERTIES
 
 sentinel_test(test_pipeline_e2e_stress      test_pipeline_e2e_stress.cpp)
 set_tests_properties(test_pipeline_e2e_stress PROPERTIES TIMEOUT 120)
+
+sentinel_test(database_performance test_database_performance.cpp)
+set_tests_properties(database_performance PROPERTIES TIMEOUT 120)
+
+# ── MainWindow completeness test — needs QApplication + full UI source tree ──
+qt_add_executable(main_window_completeness
+    test_main_window_completeness.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MainWindow.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AuditLogWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
+)
+target_include_directories(main_window_completeness PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+target_link_libraries(main_window_completeness PRIVATE
+    sentinel_core
+    Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network
+)
+add_test(NAME main_window_completeness
+    COMMAND main_window_completeness -platform offscreen)
+set_tests_properties(main_window_completeness PROPERTIES
+    TIMEOUT 120
+    LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+)

@@ -307,6 +307,20 @@ QVector<InvestigativeLead> HintEngine::generate(const HintEngineInput& input) co
 
     all += networkLeadsFromInput(input.networkLeads, rank);
 
+    // Deduplicate: remove leads that share an identical headline
+    {
+        QSet<QString> seen;
+        QVector<InvestigativeLead> deduped;
+        deduped.reserve(all.size());
+        for (const auto& lead : all) {
+            if (!seen.contains(lead.headline)) {
+                seen.insert(lead.headline);
+                deduped.append(lead);
+            }
+        }
+        all = std::move(deduped);
+    }
+
     detectContradictions(all);
     rerankLeads(all, input.dataQuality);
 

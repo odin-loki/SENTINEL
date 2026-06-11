@@ -11,6 +11,12 @@ public:
     explicit DataQualityScorer(
         const QMap<QString, double>& sourceReliabilityMap = {});
 
+    // Convenience: create scorer with pre-populated reliability values for known sources
+    static DataQualityScorer withDefaults();
+
+    // Default reliability values for known SENTINEL data sources
+    static QMap<QString, double> defaultReliabilityMap();
+
     QualityReport score(const CrimeEvent& event) const;
 
     // Batch: returns vector of reports, same order as input

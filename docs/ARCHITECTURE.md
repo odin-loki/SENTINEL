@@ -42,7 +42,7 @@ SENTINEL is structured as a layered pipeline. Each layer has strictly defined re
 └──────────────────────────┬───────────────────────────────────┘
                            │
 ┌──────────────────────────▼───────────────────────────────────┐
-│  UI LAYER      MainWindow → 9 child widgets                  │
+│  UI LAYER      MainWindow → 7 child widgets                  │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -56,27 +56,32 @@ All inter-layer communication uses these shared structs. They are copy-construct
 Primary data entity — one record from any source.
 
 ```
-lat, lon                  double (WGS-84)
-timestamp                 QDateTime
-crimeType                 QString
+eventId                   QString (primary key)
+source, sourceVersion     QString
+occurredAt                std::optional<QDateTime>
+crimeType, crimeSubtype   QString
+lat, lon                  std::optional<double> (WGS-84)
 suburb, street, postcode  QString
-description               QString
-quality                   double [0,1]
+narrative                 QString
+qualityScore              double [0,1]
 moFeatures                MOFeatures
 nlpResult                 NLPResult
-lat/lon                   std::optional<double> (from CSV importer)
 ```
 
 ### `InvestigativeLead`
 Output of HintEngine.
 
 ```
-headline     QString
-detail       QString
-confidence   double [0,1]
-sourceType   QString
-provenance   std::vector<QString>
-crimeIds     std::vector<int>
+rank              int (1 = highest priority)
+category          QString (series_linkage, mo_similarity, geographic, anomaly, network_association)
+headline          QString
+detail            QString
+confidence        double [0,1]
+confidenceMethod  QString
+supportingData    QJsonObject
+provenance        std::vector<QString>
+contradictions    std::vector<QString>
+generatedAt       QDateTime
 ```
 
 ### `GeographicProfile`
@@ -142,52 +147,71 @@ Data sources emit:
 - `fetchComplete(int count)` — batch done
 - `fetchError(QString message)` — async failure
 
-`HintEngine` emits:
-- `leadsReady(QVector<InvestigativeLead>)` — batch of leads
+`HintEngine` is a pure value-returning service (not a `QObject`):
+- `generate(HintEngineInput) → QVector<InvestigativeLead>` — returns ranked leads synchronously
 
 `SentinelLogger` emits:
 - `newEntry(LogEntry)` — for live console display
 
 ---
 
-## Database Schema (v5)
+## Database Schema (v3)
 
 ```sql
-CREATE TABLE schema_version (version INTEGER PRIMARY KEY);
+CREATE TABLE schema_version (version INTEGER NOT NULL);
 
-CREATE TABLE crime_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT,
-    crime_type TEXT,
-    latitude REAL,
-    longitude REAL,
-    suburb TEXT,
-    street TEXT,
-    postcode TEXT,
-    description TEXT,
-    quality REAL,
-    source TEXT
+CREATE TABLE events (
+    event_id          TEXT PRIMARY KEY,
+    source            TEXT,
+    source_version    TEXT,
+    ingested_at       TEXT,
+    occurred_at       TEXT,
+    crime_type        TEXT,
+    crime_subtype     TEXT,
+    location_raw      TEXT,
+    lat               REAL,
+    lon               REAL,
+    suburb            TEXT,
+    street            TEXT,
+    postcode          TEXT,
+    narrative         TEXT,
+    outcome           TEXT,
+    quality_score     REAL
 );
 
-CREATE TABLE provenance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    crime_id INTEGER REFERENCES crime_events(id),
-    stage TEXT,
-    description TEXT,
-    timestamp TEXT
+CREATE TABLE leads (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id            TEXT,
+    rank                INTEGER,
+    category            TEXT,
+    headline            TEXT,
+    detail              TEXT,
+    confidence          REAL,
+    confidence_method   TEXT,
+    supporting_data     TEXT,
+    contradictions      TEXT,
+    provenance          TEXT,
+    generated_at        TEXT
 );
 
-CREATE TABLE mo_cases (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    crime_id INTEGER,
-    mo_string TEXT,
-    entry_method TEXT,
-    target_type TEXT,
-    outcome TEXT
+CREATE TABLE audit_log (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts        TEXT,
+    event_id  TEXT,
+    category  TEXT,
+    message   TEXT
+);
+
+-- v3 migration adds:
+CREATE TABLE zone_risk_scores (
+    zone_id     TEXT PRIMARY KEY,
+    risk_score  REAL,
+    updated_at  TEXT
 );
 ```
 
-WAL mode enabled for concurrent read/write. In-memory mode (`:memory:`) used in tests.
+WAL mode enabled (`PRAGMA journal_mode=WAL`) for concurrent read/write.  
+In-memory mode (`:memory:`) used in all tests.
 
 ---
 
@@ -215,4 +239,4 @@ aleatoric  = mean over models of each model's internal variance
 epistemic  = variance over models of their mean predictions
 ```
 
-Both are propagated to `EnsemblePrediction.lowerCI` / `upperCI` and visible in the UI calibration panel.
+Both components are propagated to `EnsemblePrediction.ciLow95` / `ciHigh95` (computed as `probCrime ± 1.96 * σ_total`) and are visible in the Analytics → Calibration tab.

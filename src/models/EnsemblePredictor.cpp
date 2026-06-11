@@ -116,8 +116,11 @@ EnsemblePrediction EnsemblePredictor::predict(
         // Epistemic = model disagreement
         result.uncertaintyEpistemic = std::abs(poissonProb - hawkesProb) / 2.0;
 
-        result.dominantModel = (m_wPoisson > m_wHawkes)
-                               ? QStringLiteral("poisson") : QStringLiteral("hawkes");
+        if (std::abs(m_wPoisson - m_wHawkes) < 1e-9)
+            result.dominantModel = QStringLiteral("equal");
+        else
+            result.dominantModel = (m_wPoisson > m_wHawkes)
+                                   ? QStringLiteral("poisson") : QStringLiteral("hawkes");
     } else if (havePoi) {
         result.probCrime     = poissonProb;
         result.expectedCount = poissonCount;

@@ -11,50 +11,64 @@ Represents a single crime record from any source.
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | `int` | Database primary key |
-| `timestamp` | `QDateTime` | Event time (UTC) |
+| `eventId` | `QString` | Primary key |
+| `source` | `QString` | Data source identifier (e.g. "uk_police_v1") |
+| `sourceVersion` | `QString` | Source schema version |
+| `ingestedAt` | `QDateTime` | When the record was stored |
+| `occurredAt` | `std::optional<QDateTime>` | When the crime occurred (UTC) |
 | `crimeType` | `QString` | Normalised crime category |
+| `crimeSubtype` | `std::optional<QString>` | More specific category |
+| `lat`, `lon` | `std::optional<double>` | WGS-84 coordinates |
 | `suburb` | `QString` | Suburb or area name |
 | `street` | `QString` | Street name (may be anonymised) |
 | `postcode` | `QString` | UK postcode or equivalent |
-| `latitude` | `double` | WGS-84 latitude |
-| `longitude` | `double` | WGS-84 longitude |
-| `lat` | `std::optional<double>` | Parsed latitude (CSV importer) |
-| `lon` | `std::optional<double>` | Parsed longitude (CSV importer) |
-| `description` | `QString` | Free-text description |
-| `quality` | `double` | DataQualityScorer composite score [0,1] |
-| `source` | `QString` | Data source identifier |
-| `moFeatures` | `MOFeatures` | Extracted MO features |
-| `nlpResult` | `NLPResult` | NLP classification result |
+| `narrative` | `std::optional<QString>` | Free-text description |
+| `outcome` | `QString` | "resolved" \| "unresolved" \| "unknown" |
+| `qualityScore` | `double` | DataQualityScorer composite [0,1] |
+| `meta` | `QJsonObject` | Source-specific raw fields |
+
+### `QualityReport`
+Output of `DataQualityScorer::score()`.
+
+| Field | Type | Description |
+|---|---|---|
+| `eventId` | `QString` | Matching event |
+| `completeness` | `double` | Fraction of required fields non-null |
+| `temporalPrecision` | `QString` | "hour" \| "day" \| "month" \| "unknown" |
+| `spatialPrecision` | `QString` | "exact" \| "block" \| "suburb" \| "unknown" |
+| `sourceReliability` | `double` | Per-source reliability [0,1] |
+| `compositeScore` | `double` | Weighted composite [0,1] |
+| `quarantined` | `bool` | True if compositeScore < 0.3 |
 
 ---
 
 ## NLP Structures
 
 ### `MOFeatures`
-Extracted from `description` by `MOExtractor`.
+Extracted from narrative text by `MOExtractor`.
 
 | Field | Type | Description |
 |---|---|---|
-| `entryMethod` | `QString` | e.g. "forced_entry", "rear_door" |
-| `targetType` | `QString` | e.g. "residential", "commercial" |
-| `timeOfDay` | `QString` | "night", "day", "unknown" |
-| `weapons` | `QStringList` | Weapon mentions |
-| `itemsTaken` | `QStringList` | Stolen items |
-| `isSolo` | `bool` | Solo offender vs group |
-| `rawMO` | `QString` | Original MO text |
+| `entryMethod` | `std::optional<QString>` | "forced_entry" \| "unlocked" \| "deception" \| "tailgating" |
+| `targetType` | `std::optional<QString>` | "residential" \| "commercial" \| "vehicle" \| "person" |
+| `timeOfDay` | `std::optional<QString>` | "early_morning" \| "morning" \| "afternoon" \| "evening" \| "night" |
+| `weaponType` | `std::optional<QString>` | "firearm" \| "knife" \| "blunt" \| "other" |
+| `itemsTaken` | `std::vector<QString>` | Stolen items (normalised) |
+| `victimProfile` | `std::optional<QString>` | "elderly" \| "child" \| "female" \| "male" \| "vulnerable" |
+| `soloOrGroup` | `std::optional<QString>` | "solo" \| "group" |
 
 ### `NLPResult`
 Classification result from `CrimeClassifier`.
 
 | Field | Type | Description |
 |---|---|---|
-| `primaryType` | `QString` | Most likely crime type |
-| `secondaryTypes` | `QStringList` | Additional types |
-| `confidence` | `double` | Classification confidence [0,1] |
-| `severity` | `int` | 1–5 severity scale |
-| `hasThreatSignal` | `bool` | Threat language detected |
-| `sentimentScore` | `double` | Sentiment [-1, 1] |
+| `eventId` | `QString` | Associated event |
+| `crimeType` | `std::optional<QString>` | Classified crime category |
+| `crimeTypeConfidence` | `double` | TF-IDF classification confidence [0,1] |
+| `severityScore` | `double` | Crime severity [0.0–1.0] |
+| `sentimentCompound` | `double` | VADER-style compound score [-1,1] |
+| `threatSignal` | `bool` | True if threat language detected |
+| `moFeatures` | `MOFeatures` | Extracted MO features |
 
 ---
 
@@ -63,37 +77,42 @@ Classification result from `CrimeClassifier`.
 ### `PoissonPrediction`
 | Field | Type | Description |
 |---|---|---|
-| `meanRate` | `double` | Expected count per window |
-| `probAtLeastOne` | `double` | P(X ≥ 1) |
-| `lowerCI` | `double` | 5th percentile |
-| `upperCI` | `double` | 95th percentile |
-| `overdispersed` | `bool` | Negative Binomial used |
+| `lambda` | `double` | Expected count per window (λ) |
+| `probAtLeastOne` | `double` | P(X ≥ 1) = 1 – exp(–λ) |
+| `expectedCount` | `double` | E[N] |
+| `ci90` | `std::pair<double,double>` | (5th, 95th) percentile on count |
+| `nObservations` | `int` | Number of training windows |
+| `model` | `QString` | "poisson" \| "negative_binomial" |
 
 ### `HawkesParams`
 | Field | Type | Description |
 |---|---|---|
 | `mu` | `double` | Background intensity |
-| `alpha` | `double` | Excitation magnitude |
-| `beta` | `double` | Temporal decay rate |
+| `alpha` | `double` | Excitation magnitude (α < β for stationarity) |
+| `beta` | `double` | Temporal decay rate (1/days) |
+| `sigma` | `double` | Spatial bandwidth (degrees) |
+| `logLik` | `double` | Log-likelihood at fitted parameters |
 
 ### `EnsemblePrediction`
 | Field | Type | Description |
 |---|---|---|
-| `probability` | `double` | Calibrated ensemble probability |
-| `lowerCI` | `double` | Lower credible interval |
-| `upperCI` | `double` | Upper credible interval |
-| `aleatoricUncertainty` | `double` | Irreducible noise |
-| `epistemicUncertainty` | `double` | Model uncertainty |
-| `dominantModel` | `QString` | "Poisson" or "Hawkes" |
+| `probCrime` | `double` | P(≥1 crime) post-calibration [0,1] |
+| `expectedCount` | `double` | E[N] |
+| `ci90` | `QPair<double,double>` | 90% CI on count |
+| `ciLow95`, `ciHigh95` | `double` | 95% CI on probCrime |
+| `uncertaintyAleatoric` | `double` | Irreducible randomness (CI width / 3.29) |
+| `uncertaintyEpistemic` | `double` | Model disagreement \|p_poi – p_hawk\| / 2 |
+| `poissonWeight`, `hawkesWeight` | `double` | Component contributions [0,1] |
+| `calibrated` | `bool` | True if isotonic calibration applied |
+| `dominantModel` | `QString` | "poisson" \| "hawkes" \| "equal" |
 
 ### `ForecastDay`
 | Field | Type | Description |
 |---|---|---|
 | `date` | `QDate` | Forecast date |
-| `riskScore` | `double` | [0,1] aggregated risk |
-| `alertLevel` | `AlertLevel` | NORMAL/ELEVATED/HIGH/CRITICAL |
-| `lowerCI` | `double` | Lower CI |
-| `upperCI` | `double` | Upper CI |
+| `riskScore` | `double` | Aggregated risk [0,1] |
+| `alertLevel` | `AlertLevel` | NORMAL \| ELEVATED \| HIGH \| CRITICAL |
+| `lowerCI`, `upperCI` | `double` | Credible interval bounds |
 
 ---
 
@@ -104,34 +123,40 @@ Output of `HintEngine`.
 
 | Field | Type | Description |
 |---|---|---|
+| `rank` | `int` | Priority (1 = highest) |
+| `category` | `QString` | "series_linkage" \| "mo_similarity" \| "geographic" \| "anomaly" \| "network_association" |
 | `headline` | `QString` | Short lead title |
 | `detail` | `QString` | Full explanation |
 | `confidence` | `double` | Lead strength [0,1] |
-| `sourceType` | `QString` | Lead origin type |
+| `confidenceMethod` | `QString` | Method used to estimate confidence |
+| `supportingData` | `QJsonObject` | Structured supporting evidence |
+| `contradictions` | `std::vector<QString>` | Conflicting leads detected |
 | `provenance` | `std::vector<QString>` | Computation chain |
-| `crimeIds` | `std::vector<int>` | Contributing event IDs |
+| `generatedAt` | `QDateTime` | When the lead was generated |
 
 ### `GeographicProfile`
 Output of `GeographicProfiler`.
 
 | Field | Type | Description |
 |---|---|---|
-| `peakLat` | `double` | Highest-probability anchor latitude |
-| `peakLon` | `double` | Highest-probability anchor longitude |
+| `peakLat`, `peakLon` | `double` | Highest-probability anchor point |
 | `peakProbability` | `double` | Maximum surface value |
-| `searchArea50pct` | `double` | km² containing 50% of probability |
-| `searchArea80pct` | `double` | km² containing 80% of probability |
-| `grid` | `QVector<GridCell>` | Full probability grid |
+| `searchArea50pct` | `double` | km² containing 50% of probability mass |
+| `searchArea80pct` | `double` | km² containing 80% of probability mass |
+| `probabilitySurface` | `std::vector<std::vector<double>>` | Full probability grid |
+| `gridLats`, `gridLons` | `std::vector<double>` | Grid axis coordinates |
 
 ### `AnomalySignal`
 Output of `AnomalyDetector`.
 
 | Field | Type | Description |
 |---|---|---|
-| `crimeId` | `int` | Associated event |
-| `combinedScore` | `double` | Aggregated anomaly magnitude |
-| `lat` | `double` | Event latitude |
-| `lon` | `double` | Event longitude |
+| `eventId` | `QString` | Associated event ID |
+| `isolationScore` | `double` | Isolation Forest score |
+| `zScoreTemporal` | `double` | Temporal Z-score |
+| `zScoreSpatial` | `double` | Spatial Z-score |
+| `combinedScore` | `double` | Aggregated anomaly magnitude [0,1] |
+| `isAnomaly` | `bool` | True if above contamination threshold |
 | `signalReasons` | `std::vector<QString>` | Contributing factors |
 
 ### `SeriesMatch`
@@ -139,11 +164,14 @@ Output of `SeriesDetector`.
 
 | Field | Type | Description |
 |---|---|---|
-| `seriesId` | `int` | Cluster identifier |
+| `seriesId` | `QString` | Cluster identifier |
+| `memberCount` | `int` | Events in this cluster |
 | `linkProbability` | `double` | Linkage probability [0,1] |
+| `spatialDistanceM` | `double` | Metres from query event |
+| `temporalDistanceDays` | `double` | Days from query event |
+| `moSimilarity` | `double` | Jaccard MO similarity [0,1] |
 | `compositeScore` | `double` | Combined distance score |
-| `memberCount` | `int` | Events in series |
-| `crimeType` | `QString` | Dominant crime type |
+| `method` | `QString` | Clustering method |
 
 ### `NetworkLead`
 Output of `CoOffendingAnalyser`.
@@ -151,9 +179,12 @@ Output of `CoOffendingAnalyser`.
 | Field | Type | Description |
 |---|---|---|
 | `personId` | `QString` | Suspect identifier |
-| `riskScore` | `double` | Risk score [0,1] |
-| `connectionType` | `QString` | Connection type (co-offending, associate) |
-| `reasoning` | `QString` | Explanation of the lead |
+| `connectionType` | `QString` | "direct_cooffender" \| "second_degree" \| "venue_linked" |
+| `sharedIncidents` | `int` | Number of shared incidents |
+| `centralityScore` | `double` | PageRank / betweenness centrality |
+| `communityId` | `int` | Network community index |
+| `riskScore` | `double` | Composite risk score [0,1] |
+| `reasoning` | `QString` | Explanation text |
 
 ---
 
@@ -169,7 +200,7 @@ Output of `CoOffendingAnalyser`.
 | `logLoss` | `double` | Cross-entropy loss |
 | `nSamples` | `int` | Number of predictions |
 | `bins` | `QVector<CalibrationBin>` | Per-bin statistics |
-| `statusLabel` | `QString` | "Well-calibrated", "Overconfident", etc. |
+| `statusLabel` | `QString` | "Well-calibrated" \| "Overconfident" \| "Underconfident" |
 
 ### `BiasReport`
 | Field | Type | Description |
@@ -181,14 +212,14 @@ Output of `CoOffendingAnalyser`.
 
 ---
 
-## Provenance
+## Provenance & Logging
 
 ### `ProvenanceEntry`
 | Field | Type | Description |
 |---|---|---|
-| `crimeId` | `int` | Event this entry belongs to |
+| `eventId` | `QString` | Event this entry belongs to |
 | `stage` | `QString` | Pipeline stage name |
-| `description` | `QString` | What was done |
+| `description` | `QString` | What was done at this stage |
 | `timestamp` | `QDateTime` | When this stage ran |
 
 ### `LogEntry`
@@ -197,6 +228,6 @@ Output of `CoOffendingAnalyser`.
 | Field | Type | Description |
 |---|---|---|
 | `level` | `QtMsgType` | Qt message level |
-| `category` | `QString` | Qt logging category |
+| `category` | `QString` | Qt logging category (lcIngest, lcNlp, etc.) |
 | `message` | `QString` | Log message text |
 | `timestamp` | `QDateTime` | Entry time |

@@ -6,6 +6,28 @@ DataQualityScorer::DataQualityScorer(const QMap<QString, double>& sourceReliabil
     : m_sourceReliability(sourceReliabilityMap)
 {}
 
+// static
+QMap<QString, double> DataQualityScorer::defaultReliabilityMap()
+{
+    return {
+        { QStringLiteral("uk_police_v1"),  0.90 },   // Official UK Police Open Data API
+        { QStringLiteral("open_meteo"),    0.85 },   // Open-Meteo free weather service
+        { QStringLiteral("csv_import"),    0.60 },   // Local CSV — quality depends on source
+        { QStringLiteral("chicago_pd"),    0.85 },   // Chicago PD open data portal
+        { QStringLiteral("nypd"),          0.85 },   // NYPD open data portal
+        { QStringLiteral("lapd"),          0.80 },   // LAPD open data portal
+        { QStringLiteral("abs_australia"), 0.80 },   // Australian Bureau of Statistics
+        { QStringLiteral("test"),          0.50 },   // Test / synthetic data
+        { QStringLiteral("manual"),        0.40 },   // Manual entry
+    };
+}
+
+// static
+DataQualityScorer DataQualityScorer::withDefaults()
+{
+    return DataQualityScorer(defaultReliabilityMap());
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
