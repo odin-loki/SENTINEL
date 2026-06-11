@@ -130,7 +130,7 @@ QVector<InvestigativeLead> HintEngine::geoLeads(
                         .arg(profile.searchArea50pct, 0, 'f', 2)
                         .arg(profile.searchArea80pct, 0, 'f', 2)
                         .arg(profile.method);
-    lead.confidence       = std::min(profile.peakProbability * 100.0, 0.85);
+    lead.confidence       = std::min(profile.peakProbability, 0.85);
     lead.confidenceMethod = QStringLiteral("rossmo_cgt");
 
     QJsonObject data;

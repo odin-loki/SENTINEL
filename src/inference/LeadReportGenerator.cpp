@@ -55,7 +55,6 @@ LeadReport LeadReportGenerator::generate(const QString& caseId,
     pt.replace(QStringLiteral("## "), QString{});
     pt.replace(QStringLiteral("### "), QString{});
     pt.replace(QStringLiteral("**"), QString{});
-    pt.replace(QStringLiteral("*"), QString{});
     pt.replace(QStringLiteral("---"), QString{});
     report.plainText = pt;
 

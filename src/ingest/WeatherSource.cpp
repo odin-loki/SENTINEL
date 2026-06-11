@@ -52,6 +52,7 @@ int WeatherSource::parseResponse(const QByteArray& json)
     const QJsonArray wcode      = hourly.value(QStringLiteral("weathercode")).toArray();
 
     const int count = static_cast<int>(times.size());
+    int cached = 0;
 
     // Open-Meteo returns times in local ISO8601 without offset;
     // use utc_offset_seconds to reconstruct UTC key.
@@ -81,11 +82,12 @@ int WeatherSource::parseResponse(const QByteArray& json)
         // Key on the truncated UTC hour
         const QDateTime key = QDateTime(dt.date(), QTime(dt.time().hour(), 0, 0), QTimeZone::utc());
         m_cache.insert(key, wd);
+        ++cached;
     }
 
     // Mark as successfully parsed (even if 0 records — API responded correctly)
     m_lastFetchedAt = QDateTime::currentDateTimeUtc();
-    return count;
+    return cached;
 }
 
 void WeatherSource::onReplyFinished(QNetworkReply* reply)

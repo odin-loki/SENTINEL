@@ -21,6 +21,7 @@ TemporalHeatmapWidget::TemporalHeatmapWidget(QWidget* parent)
 void TemporalHeatmapWidget::setData(const std::array<std::array<int,24>,7>& counts)
 {
     m_counts   = counts;
+    m_monthly.fill(0);
     m_maxCount = 0;
     for (const auto& row : counts)
         for (int v : row)
@@ -37,6 +38,8 @@ void TemporalHeatmapWidget::setData(const QVector<CrimeEvent>& events)
 
     for (const auto& e : events) {
         const QDateTime dt = e.occurredAt.value_or(e.timestamp);
+        if (!dt.isValid())
+            continue;
         const int hour = std::clamp(dt.time().hour(), 0, 23);
         const int dow  = std::clamp(dt.date().dayOfWeek() - 1, 0, 6);
         const int mon  = std::clamp(dt.date().month() - 1, 0, 11);
@@ -44,7 +47,12 @@ void TemporalHeatmapWidget::setData(const QVector<CrimeEvent>& events)
         m_monthly[mon]++;
     }
 
-    setData(counts);
+    m_counts   = counts;
+    m_maxCount = 0;
+    for (const auto& row : counts)
+        for (int v : row)
+            if (v > m_maxCount) m_maxCount = v;
+    update();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

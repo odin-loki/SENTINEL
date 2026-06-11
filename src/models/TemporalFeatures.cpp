@@ -89,6 +89,8 @@ int TemporalFeatures::daysFromPayday(const QDate& date)
 TemporalFeatureVector TemporalFeatures::compute(const QDateTime& dt)
 {
     TemporalFeatureVector fv{};
+    if (!dt.isValid())
+        return fv;
 
     const QDate date = dt.date();
     const QTime time = dt.time();
