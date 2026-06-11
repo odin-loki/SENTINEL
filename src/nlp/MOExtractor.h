@@ -22,6 +22,7 @@ private:
     std::vector<std::pair<std::string, std::regex>> m_timePatterns;
     std::vector<std::pair<std::string, std::regex>> m_weaponPatterns;
     std::vector<std::pair<std::string, std::regex>> m_victimPatterns;
+    std::vector<std::pair<std::string, std::regex>> m_precautionPatterns;
     std::regex m_itemsPattern;
     std::regex m_soloPattern;
     std::regex m_groupPattern;

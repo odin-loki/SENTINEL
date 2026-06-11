@@ -387,12 +387,15 @@ private slots:
         const auto reports = BiasAuditor::disparateImpact(groups, preds);
         QVERIFY2(!reports.isEmpty(), "BiasAuditor must return reports");
 
+        // DI ratio = min_rate / max_rate ≤ 1.0; for strong imbalance it is < 0.8 and flagged
         bool foundHighRatio = false;
         for (const BiasReport& r : reports) {
-            if (r.groupA == QStringLiteral("A") && r.groupB == QStringLiteral("B")) {
-                QVERIFY2(r.ratio > 2.0,
-                         qPrintable(QStringLiteral("Expected DI ratio > 2.0, got %1")
+            if ((r.groupA == QStringLiteral("A") && r.groupB == QStringLiteral("B")) ||
+                (r.groupA == QStringLiteral("B") && r.groupB == QStringLiteral("A"))) {
+                QVERIFY2(r.ratio < 0.8,
+                         qPrintable(QStringLiteral("Expected DI ratio < 0.8 (imbalanced), got %1")
                                         .arg(r.ratio)));
+                QVERIFY2(r.flagged, "Imbalanced group pair should be flagged");
                 foundHighRatio = true;
             }
         }

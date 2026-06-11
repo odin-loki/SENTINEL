@@ -370,7 +370,24 @@ bool Database::deleteEvent(const QString& id)
         qCWarning(lcDatabase) << "deleteEvent failed:" << m_lastError;
         return false;
     }
+    if (q.numRowsAffected() == 0) {
+        m_lastError = QStringLiteral("Event not found: %1").arg(id);
+        return false;
+    }
     return true;
+}
+
+int Database::batchInsert(const QVector<CrimeEvent>& events)
+{
+    if (events.isEmpty()) return 0;
+    m_db.transaction();
+    int inserted = 0;
+    for (const auto& ev : events) {
+        if (insertEvent(ev))
+            ++inserted;
+    }
+    m_db.commit();
+    return inserted;
 }
 
 QVector<CrimeEvent> Database::queryEvents(const QString& crimeType,

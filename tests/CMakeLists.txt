@@ -13,7 +13,7 @@ macro(sentinel_test TARGET)
     add_test(NAME ${TARGET} COMMAND ${TARGET})
     set_tests_properties(${TARGET} PROPERTIES
         TIMEOUT 120
-        ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+        ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
     )
 endmacro()
 
@@ -54,7 +54,7 @@ target_link_libraries(test_ui_automation PRIVATE
 add_test(NAME test_ui_automation COMMAND test_ui_automation -platform offscreen)
 set_tests_properties(test_ui_automation PROPERTIES
     TIMEOUT 60
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
     LABELS "ui"
 )
 sentinel_test(test_benchmark         test_benchmark.cpp)
@@ -69,7 +69,7 @@ target_link_libraries(test_performance PRIVATE
 add_test(NAME test_performance COMMAND test_performance)
 set_tests_properties(test_performance PROPERTIES
     TIMEOUT 300
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 sentinel_test(test_kde_hotspot       test_kde_hotspot.cpp)
 sentinel_test(test_risk_forecaster   test_risk_forecaster.cpp)
@@ -84,7 +84,7 @@ target_link_libraries(test_network_stress PRIVATE
 add_test(NAME test_network_stress COMMAND test_network_stress)
 set_tests_properties(test_network_stress PROPERTIES
     TIMEOUT 240
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 sentinel_test(test_gp_ensemble_integration test_gp_ensemble_integration.cpp)
 sentinel_test(test_nlp_pipeline       test_nlp_pipeline.cpp)
@@ -110,7 +110,7 @@ target_link_libraries(test_performance_suite PRIVATE
 add_test(NAME test_performance_suite COMMAND test_performance_suite)
 set_tests_properties(test_performance_suite PROPERTIES
     TIMEOUT 600
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 sentinel_test(test_app_config              test_app_config.cpp)
 sentinel_test(test_settings_persistence    test_settings_persistence.cpp)
@@ -241,6 +241,9 @@ set_tests_properties(test_cooffending_analyser PROPERTIES TIMEOUT 30)
 sentinel_test(test_database_deep                          test_database_deep.cpp)
 set_tests_properties(test_database_deep PROPERTIES TIMEOUT 30)
 
+sentinel_test(database_provenance_deep test_database_provenance_deep.cpp)
+set_tests_properties(database_provenance_deep PROPERTIES TIMEOUT 30)
+
 sentinel_test(test_crime_classifier_deep                  test_crime_classifier_deep.cpp)
 set_tests_properties(test_crime_classifier_deep PROPERTIES TIMEOUT 30)
 
@@ -366,11 +369,11 @@ target_link_libraries(test_leads_widget_interaction PRIVATE
     sentinel_core
     Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network
 )
-add_test(NAME test_leads_widget_interaction COMMAND test_leads_widget_interaction)
+add_test(NAME test_leads_widget_interaction COMMAND test_leads_widget_interaction -platform offscreen)
 set_tests_properties(test_leads_widget_interaction PROPERTIES
     TIMEOUT 120
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 sentinel_test(test_all_models_perf     test_all_models_perf.cpp)
 set_tests_properties(test_all_models_perf PROPERTIES TIMEOUT 120)
@@ -385,10 +388,10 @@ qt_add_executable(test_audit_log_widget
 target_include_directories(test_audit_log_widget PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_audit_log_widget PRIVATE
     sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
-add_test(NAME test_audit_log_widget COMMAND test_audit_log_widget)
+add_test(NAME test_audit_log_widget COMMAND test_audit_log_widget -platform offscreen)
 set_tests_properties(test_audit_log_widget PROPERTIES
     TIMEOUT 60
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 sentinel_test(test_database_integration  test_database_integration.cpp)
 sentinel_test(test_hint_quality_mrr      test_hint_quality_mrr.cpp)
@@ -418,15 +421,18 @@ qt_add_executable(test_ui_widgets_deep
 target_include_directories(test_ui_widgets_deep PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_ui_widgets_deep PRIVATE
     sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
-add_test(NAME test_ui_widgets_deep COMMAND test_ui_widgets_deep)
+add_test(NAME test_ui_widgets_deep COMMAND test_ui_widgets_deep -platform offscreen)
 set_tests_properties(test_ui_widgets_deep PROPERTIES
     TIMEOUT 60
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 sentinel_test(test_bias_auditor_deep      test_bias_auditor_deep.cpp)
 
 sentinel_test(test_mo_analyser_tfidf             test_mo_analyser_tfidf.cpp)
 set_tests_properties(test_mo_analyser_tfidf PROPERTIES TIMEOUT 30)
+
+sentinel_test(nlp_mo_deep test_nlp_mo_deep.cpp)
+set_tests_properties(nlp_mo_deep PROPERTIES TIMEOUT 30)
 
 sentinel_test(test_pipeline_integration_deep  test_pipeline_integration_deep.cpp)
 set_tests_properties(test_pipeline_integration_deep PROPERTIES TIMEOUT 30)
@@ -441,7 +447,7 @@ target_link_libraries(test_pipeline_stress PRIVATE
 add_test(NAME test_pipeline_stress COMMAND test_pipeline_stress)
 set_tests_properties(test_pipeline_stress PROPERTIES
     TIMEOUT 120
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 qt_add_executable(test_heatmap_widget
     test_heatmap_widget.cpp
@@ -451,10 +457,10 @@ qt_add_executable(test_heatmap_widget
 target_include_directories(test_heatmap_widget PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_heatmap_widget PRIVATE
     sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
-add_test(NAME test_heatmap_widget COMMAND test_heatmap_widget)
+add_test(NAME test_heatmap_widget COMMAND test_heatmap_widget -platform offscreen)
 set_tests_properties(test_heatmap_widget PROPERTIES
     TIMEOUT 60
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 # Map and Analytics deep UI tests
 qt_add_executable(test_ui_map_analytics
@@ -467,11 +473,11 @@ qt_add_executable(test_ui_map_analytics
 target_include_directories(test_ui_map_analytics PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_ui_map_analytics PRIVATE
     sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
-add_test(NAME test_ui_map_analytics COMMAND test_ui_map_analytics)
+add_test(NAME test_ui_map_analytics COMMAND test_ui_map_analytics -platform offscreen)
 set_tests_properties(test_ui_map_analytics PROPERTIES
     TIMEOUT 120
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 sentinel_test(test_gp_regression_full    test_gp_regression_full.cpp)
@@ -488,9 +494,9 @@ qt_add_executable(test_performance_benchmark test_performance_benchmark.cpp)
 target_include_directories(test_performance_benchmark PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_performance_benchmark PRIVATE
     sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
-add_test(NAME test_performance_benchmark COMMAND test_performance_benchmark)
+add_test(NAME test_performance_benchmark COMMAND test_performance_benchmark -platform offscreen)
 set_tests_properties(test_performance_benchmark PROPERTIES TIMEOUT 120
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}")
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
 
 # ── RiskForecaster alert & horizon tests ─────────────────────────────────────
 sentinel_test(test_risk_forecaster_alerts  test_risk_forecaster_alerts.cpp)
@@ -525,6 +531,9 @@ set_tests_properties(models_edge_cases PROPERTIES TIMEOUT 60)
 sentinel_test(hawkes_ensemble_deep test_hawkes_ensemble_deep.cpp)
 set_tests_properties(hawkes_ensemble_deep PROPERTIES TIMEOUT 60)
 
+sentinel_test(risk_ensemble_deep test_risk_ensemble_deep.cpp)
+set_tests_properties(risk_ensemble_deep PROPERTIES TIMEOUT 60)
+
 sentinel_test(test_gp_regression_deep2      test_gp_regression_deep2.cpp)
 set_tests_properties(test_gp_regression_deep2 PROPERTIES TIMEOUT 60)
 
@@ -544,7 +553,7 @@ add_test(NAME test_temporal_heatmap_data
 set_tests_properties(test_temporal_heatmap_data PROPERTIES
     TIMEOUT 60
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 # ── AnalyticsWidget data-model tests ──────────────────────────────────────────
@@ -562,7 +571,7 @@ add_test(NAME test_analytics_widget_data
 set_tests_properties(test_analytics_widget_data PROPERTIES
     TIMEOUT 60
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 # ── MainWindow integration test — needs QApplication + full UI source tree ───
@@ -592,7 +601,7 @@ add_test(NAME test_main_window_integration
 set_tests_properties(test_main_window_integration PROPERTIES
     TIMEOUT 120
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 # ── EventsTableWidget focused tests ──────────────────────────────────────────
@@ -603,10 +612,10 @@ qt_add_executable(test_events_table_widget
 target_include_directories(test_events_table_widget PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_events_table_widget PRIVATE
     sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
-add_test(NAME test_events_table_widget COMMAND test_events_table_widget)
+add_test(NAME test_events_table_widget COMMAND test_events_table_widget -platform offscreen)
 set_tests_properties(test_events_table_widget PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 # ── DebugConsoleWidget focused tests ─────────────────────────────────────────
@@ -617,10 +626,10 @@ qt_add_executable(test_debug_console_widget
 target_include_directories(test_debug_console_widget PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_debug_console_widget PRIVATE
     sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
-add_test(NAME test_debug_console_widget COMMAND test_debug_console_widget)
+add_test(NAME test_debug_console_widget COMMAND test_debug_console_widget -platform offscreen)
 set_tests_properties(test_debug_console_widget PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 # ── MapWidget focused tests ───────────────────────────────────────────────────
@@ -631,10 +640,10 @@ qt_add_executable(test_map_widget
 target_include_directories(test_map_widget PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_map_widget PRIVATE
     sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
-add_test(NAME test_map_widget COMMAND test_map_widget)
+add_test(NAME test_map_widget COMMAND test_map_widget -platform offscreen)
 set_tests_properties(test_map_widget PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 # ── DashboardWidget focused tests ─────────────────────────────────────────────
@@ -645,10 +654,10 @@ qt_add_executable(test_dashboard_widget
 target_include_directories(test_dashboard_widget PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_dashboard_widget PRIVATE
     sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
-add_test(NAME test_dashboard_widget COMMAND test_dashboard_widget)
+add_test(NAME test_dashboard_widget COMMAND test_dashboard_widget -platform offscreen)
 set_tests_properties(test_dashboard_widget PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 # ── SettingsWidget headless tests ─────────────────────────────────────────────
@@ -659,10 +668,10 @@ qt_add_executable(test_settings_widget_headless
 target_include_directories(test_settings_widget_headless PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_settings_widget_headless PRIVATE
     sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
-add_test(NAME test_settings_widget_headless COMMAND test_settings_widget_headless)
+add_test(NAME test_settings_widget_headless COMMAND test_settings_widget_headless -platform offscreen)
 set_tests_properties(test_settings_widget_headless PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 sentinel_test(test_pipeline_e2e_stress      test_pipeline_e2e_stress.cpp)
@@ -678,7 +687,7 @@ target_sources(appconfig_database_deep PRIVATE
 set_tests_properties(appconfig_database_deep PROPERTIES
     TIMEOUT 60
     LABELS "ui"
-    ENVIRONMENT "SENTINEL_HEADLESS_TEST=1;PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "SENTINEL_HEADLESS_TEST=1" "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin" "QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 # ── MainWindow completeness test — needs QApplication + full UI source tree ──
@@ -708,7 +717,7 @@ add_test(NAME main_window_completeness
 set_tests_properties(main_window_completeness PROPERTIES
     TIMEOUT 120
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin;C:/Qt/Tools/mingw1310_64/bin;$ENV{PATH}"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
 )
 
 # ── Comprehensive UI widget tests (iteration 4) ───────────────────────────────
@@ -738,3 +747,50 @@ set_tests_properties(nearrepeat_csv_mo PROPERTIES TIMEOUT 30)
 
 sentinel_test(provenance_quality_nlp test_provenance_quality_nlp.cpp)
 set_tests_properties(provenance_quality_nlp PROPERTIES TIMEOUT 30)
+
+sentinel_test(kde_bias_deep test_kde_bias_deep.cpp)
+set_tests_properties(kde_bias_deep PROPERTIES TIMEOUT 30)
+
+sentinel_test(nearrepeat_deep2 test_nearrepeat_deep2.cpp)
+set_tests_properties(nearrepeat_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(geographic_profiler_deep2 test_geographic_profiler_deep2.cpp)
+set_tests_properties(geographic_profiler_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(hawkes_deep2 test_hawkes_deep2.cpp)
+set_tests_properties(hawkes_deep2 PROPERTIES TIMEOUT 60)
+
+sentinel_test(bayesian_hierarchical_deep2 test_bayesian_hierarchical_deep2.cpp)
+set_tests_properties(bayesian_hierarchical_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(gp_regression_deep3 test_gp_regression_deep3.cpp)
+set_tests_properties(gp_regression_deep3 PROPERTIES TIMEOUT 30)
+sentinel_test(provenance_log_deep2 test_provenance_log_deep2.cpp)
+set_tests_properties(provenance_log_deep2 PROPERTIES TIMEOUT 30)
+
+sentinel_test(exporter_deep2 test_exporter_deep2.cpp)
+set_tests_properties(exporter_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(csv_importer_deep2 test_csv_importer_deep2.cpp)
+set_tests_properties(csv_importer_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(data_quality_deep2 test_data_quality_deep2.cpp)
+set_tests_properties(data_quality_deep2 PROPERTIES TIMEOUT 30)
+
+sentinel_test(anomaly_detector_deep2 test_anomaly_detector_deep2.cpp)
+set_tests_properties(anomaly_detector_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(cooffending_deep2 test_cooffending_deep2.cpp)
+set_tests_properties(cooffending_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(hint_engine_deep2 test_hint_engine_deep2.cpp)
+set_tests_properties(hint_engine_deep2 PROPERTIES TIMEOUT 30)
+
+sentinel_test(crime_classifier_deep2 test_crime_classifier_deep2.cpp)
+set_tests_properties(crime_classifier_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(mo_extractor_deep2 test_mo_extractor_deep2.cpp)
+set_tests_properties(mo_extractor_deep2 PROPERTIES TIMEOUT 30)
+sentinel_test(evidence_scorer_deep2 test_evidence_scorer_deep2.cpp)
+set_tests_properties(evidence_scorer_deep2 PROPERTIES TIMEOUT 30)
+
+sentinel_test(data_exporter_deep test_data_exporter_deep.cpp)
+set_tests_properties(data_exporter_deep PROPERTIES TIMEOUT 30)
+
+sentinel_test(temporal_features_deep2 test_temporal_features_deep2.cpp)
+set_tests_properties(temporal_features_deep2 PROPERTIES TIMEOUT 30)
+
+sentinel_test(poisson_baseline_deep2 test_poisson_baseline_deep2.cpp)
+set_tests_properties(poisson_baseline_deep2 PROPERTIES TIMEOUT 30)

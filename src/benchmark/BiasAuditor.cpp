@@ -63,12 +63,16 @@ QMap<QString, GroupStats> BiasAuditor::groupStats(
         auto& s = stats[g];
         s.groupId = g;
         s.nEvents++;
-        if (yPred[i] >= 0.5) s.nFlagged++;
+        const bool predPos = (yPred[i] >= 0.5);
+        const bool actPos  = (yTrue[i] >= 0.5);
+        if (predPos) s.nFlagged++;
         s.meanPred   += yPred[i];
         s.actualRate += yTrue[i];
-        if (yTrue[i] >= 0.5) {
+        if (actPos) {
             s.nActualPos++;
-            if (yPred[i] >= 0.5) s.nTP++;
+            if (predPos) s.nTP++; else s.nFN++;
+        } else {
+            if (predPos) s.nFP++; else s.nTN++;
         }
     }
 
@@ -78,6 +82,11 @@ QMap<QString, GroupStats> BiasAuditor::groupStats(
             s.meanPred   /= s.nEvents;
             s.actualRate /= s.nEvents;
         }
+        const int negTotal = s.nFP + s.nTN;
+        const int posTotal = s.nTP + s.nFN;
+        s.falsePositiveRate = (negTotal > 0) ? static_cast<double>(s.nFP) / negTotal : 0.0;
+        s.falseNegativeRate = (posTotal > 0) ? static_cast<double>(s.nFN) / posTotal : 0.0;
+        s.truePositiveRate  = (posTotal > 0) ? static_cast<double>(s.nTP) / posTotal : 0.0;
     }
     return stats;
 }
@@ -124,13 +133,16 @@ QVector<BiasReport> BiasAuditor::disparateImpact(
         rep.valueA = rateA;
         rep.valueB = rateB;
 
-        if (rateB < 1e-9) {
-            rep.ratio   = (rateA < 1e-9) ? 1.0 : std::numeric_limits<double>::infinity();
-            rep.flagged = rep.ratio > DI_HIGH;
-            rep.notes   = QStringLiteral("Group B has zero positive rate");
+        const double hiRate = std::max(rateA, rateB);
+        const double loRate = std::min(rateA, rateB);
+
+        if (hiRate < 1e-9) {
+            rep.ratio   = 1.0;
+            rep.flagged = false;
+            rep.notes   = QStringLiteral("Both groups have zero positive rate");
         } else {
-            rep.ratio   = rateA / rateB;
-            rep.flagged = (rep.ratio < DI_LOW || rep.ratio > DI_HIGH);
+            rep.ratio   = loRate / hiRate;
+            rep.flagged = (rep.ratio < DI_LOW);
         }
         reports.append(rep);
     }

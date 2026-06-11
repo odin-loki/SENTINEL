@@ -366,5 +366,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(SeriesCooffendDeepTest)
+QTEST_GUILESS_MAIN(SeriesCooffendDeepTest)
 #include "test_series_cooffend_deep.moc"

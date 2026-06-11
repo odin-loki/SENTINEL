@@ -313,5 +313,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(IngestDeepTest)
+QTEST_GUILESS_MAIN(IngestDeepTest)
 #include "test_ingest_deep.moc"

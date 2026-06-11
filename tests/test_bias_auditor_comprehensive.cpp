@@ -59,13 +59,15 @@ private slots:
         const auto reports = BiasAuditor::disparateImpact(groups, yPred);
         QVERIFY(!reports.isEmpty());
 
-        // At least one pair must be flagged and have ratio > 1.2 (or infinity)
+        // At least one pair must be flagged. Disparate impact = min/max selection rate,
+        // so ratio is in [0,1]; for extreme disparity it approaches 0.
         bool foundFlagged = false;
         for (const BiasReport& r : reports) {
             if (r.flagged) {
                 foundFlagged = true;
-                QVERIFY2(r.ratio > 1.2 || std::isinf(r.ratio),
-                         qPrintable(QStringLiteral("flagged report should have ratio > 1.2, got %1")
+                // ratio = loRate / hiRate ≤ 1.0; extreme disparity → ratio near 0
+                QVERIFY2(r.ratio < 0.8,
+                         qPrintable(QStringLiteral("flagged report should have ratio < 0.8, got %1")
                                         .arg(r.ratio)));
             }
         }

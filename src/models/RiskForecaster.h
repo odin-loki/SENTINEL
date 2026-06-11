@@ -35,6 +35,7 @@ struct ZoneForecast {
     QVector<ForecastDay> days;
     double weeklyRisk = 0.0;    // mean of daily risks over forecast window
     int    alertLevel = 0;      // 0=Normal, 1=Elevated, 2=High, 3=Critical
+    int    peakDayIndex = 0;    // index into days[] with highest riskScore
     QString alertLabel() const;
 };
 

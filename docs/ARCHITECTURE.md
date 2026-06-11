@@ -228,7 +228,8 @@ CREATE TABLE zone_risk_scores (
 ```
 
 WAL mode enabled (`PRAGMA journal_mode=WAL`) for concurrent read/write.  
-In-memory mode (`:memory:`) used in all tests.
+In-memory mode (`:memory:`) used in all tests.  
+`Database::batchInsert(events)` wraps bulk loads in a single SQLite transaction for ~10× throughput improvement.
 
 ---
 

@@ -18,6 +18,7 @@ static QStringList parseCsvLine(const QString& line)
     QString field;
     bool inQuotes = false;
 
+    bool wasQuoted = false;
     for (int i = 0; i < line.size(); ++i) {
         const QChar ch = line[i];
         if (ch == QLatin1Char('"')) {
@@ -26,15 +27,17 @@ static QStringList parseCsvLine(const QString& line)
                 ++i;
             } else {
                 inQuotes = !inQuotes;
+                wasQuoted = true;
             }
         } else if (ch == QLatin1Char(',') && !inQuotes) {
-            fields.append(field.trimmed());
+            fields.append(wasQuoted ? field : field.trimmed());
             field.clear();
+            wasQuoted = false;
         } else {
             field += ch;
         }
     }
-    fields.append(field.trimmed());
+    fields.append(wasQuoted ? field : field.trimmed());
     return fields;
 }
 

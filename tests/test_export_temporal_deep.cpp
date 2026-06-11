@@ -354,5 +354,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(ExportTemporalDeepTest)
+QTEST_GUILESS_MAIN(ExportTemporalDeepTest)
 #include "test_export_temporal_deep.moc"

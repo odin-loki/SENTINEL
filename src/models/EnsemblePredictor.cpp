@@ -9,7 +9,11 @@
 void EnsemblePredictor::setWeights(double wPoisson, double wHawkes)
 {
     const double total = wPoisson + wHawkes;
-    if (total <= 0.0) return;
+    if (total <= 0.0) {
+        m_wPoisson = 0.5;
+        m_wHawkes  = 0.5;
+        return;
+    }
     m_wPoisson = wPoisson / total;
     m_wHawkes  = wHawkes  / total;
 }
@@ -104,11 +108,22 @@ EnsemblePrediction EnsemblePredictor::predict(
     }
 
     // ── Combine ─────────────────────────────────────────────────────────────
+    double wPoisson = m_wPoisson;
+    double wHawkes  = m_wHawkes;
+    const double wTotal = wPoisson + wHawkes;
+    if (wTotal <= 0.0) {
+        wPoisson = 0.5;
+        wHawkes  = 0.5;
+    } else {
+        wPoisson /= wTotal;
+        wHawkes  /= wTotal;
+    }
+
     if (havePoi && haveHawks) {
-        result.probCrime     = m_wPoisson * poissonProb + m_wHawkes * hawkesProb;
-        result.expectedCount = m_wPoisson * poissonCount + m_wHawkes * hawkesCount;
-        result.poissonWeight = m_wPoisson;
-        result.hawkesWeight  = m_wHawkes;
+        result.probCrime     = wPoisson * poissonProb + wHawkes * hawkesProb;
+        result.expectedCount = wPoisson * poissonCount + wHawkes * hawkesCount;
+        result.poissonWeight = wPoisson;
+        result.hawkesWeight  = wHawkes;
 
         // Aleatoric = CI width from Poisson (irreducible)
         result.uncertaintyAleatoric = (poissonCI90hi - poissonCI90lo) / 3.29;  // ≈ std dev
@@ -116,10 +131,10 @@ EnsemblePrediction EnsemblePredictor::predict(
         // Epistemic = model disagreement
         result.uncertaintyEpistemic = std::abs(poissonProb - hawkesProb) / 2.0;
 
-        if (std::abs(m_wPoisson - m_wHawkes) < 1e-9)
+        if (std::abs(wPoisson - wHawkes) < 1e-9)
             result.dominantModel = QStringLiteral("equal");
         else
-            result.dominantModel = (m_wPoisson > m_wHawkes)
+            result.dominantModel = (wPoisson > wHawkes)
                                    ? QStringLiteral("poisson") : QStringLiteral("hawkes");
     } else if (havePoi) {
         result.probCrime     = poissonProb;

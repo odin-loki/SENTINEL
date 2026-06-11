@@ -124,8 +124,9 @@ Classification result from `CrimeClassifier`.
 |---|---|---|
 | `zoneId` | `QString` | Zone identifier |
 | `days` | `QVector<ForecastDay>` | Per-day forecasts |
-| `weeklyRisk` | `double` | Sum of daily risks over horizon |
+| `weeklyRisk` | `double` | Mean of daily riskScore values over horizon |
 | `alertLevel` | `int` | 0=Normal, 1=Elevated, 2=High, 3=Critical |
+| `peakDayIndex` | `int` | Index into `days[]` with the highest `riskScore` |
 
 ### `ZonePosterior`
 Output of `BayesianHierarchical`.

@@ -53,6 +53,13 @@ MOExtractor::MOExtractor()
         { "business",   std::regex(R"(\b(shop|business|owner|manager|staff|employee)\b)",  ICASE) },
         { "vulnerable", std::regex(R"(\b(vulnerable|disabled|homeless|isolated)\b)",       ICASE) },
     };
+
+    // Suspect precautions (concealment / evidence avoidance)
+    m_precautionPatterns = {
+        { "gloves",    std::regex(R"(\b(gloves|wore gloves|wearing gloves)\b)", ICASE) },
+        { "mask",      std::regex(R"(\b(mask|masked|balaclava|disguise)\b)",     ICASE) },
+        { "balaclava", std::regex(R"(\b(balaclava|ski mask|face covering)\b)",  ICASE) },
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +91,7 @@ MOFeatures MOExtractor::extract(const QString& text) const
     mo.timeOfDay     = matchFirst(stdText, m_timePatterns);
     mo.weaponType    = matchFirst(stdText, m_weaponPatterns);
     mo.victimProfile = matchFirst(stdText, m_victimPatterns);
+    mo.precaution    = matchFirst(stdText, m_precautionPatterns);
 
     // Items taken: collect all unique matches
     {
@@ -128,6 +136,7 @@ QString MOExtractor::canonicalMOString(const MOFeatures& mo) const
     for (const auto& item : mo.itemsTaken) parts << item;
     if (mo.soloOrGroup)  parts << *mo.soloOrGroup;
     if (mo.victimProfile) parts << *mo.victimProfile;
+    if (mo.precaution)   parts << *mo.precaution;
 
     return parts.join(QLatin1Char(' '));
 }

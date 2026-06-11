@@ -74,6 +74,7 @@ struct MOFeatures {
     std::vector<QString> itemsTaken;
     std::optional<QString> victimProfile;
     std::optional<QString> soloOrGroup;  // solo | group | unknown
+    std::optional<QString> precaution;   // gloves | mask | balaclava
 };
 
 struct NLPResult {

@@ -1,7 +1,7 @@
 # SENTINEL — Crime Analytics & Predictive Threat Assessment System
 
 <p align="center">
-  <strong>C++23 · Qt 6 · SQLite · 204 passing tests</strong>
+  <strong>C++23 · Qt 6 · SQLite · 226 passing tests</strong>
 </p>
 
 > A fully auditable, standalone desktop application for spatiotemporal crime prediction, investigative lead generation, and anomaly detection. Every prediction is traceable to its data source, mathematical model, and quantified uncertainty. No proprietary APIs. No black-box AI.

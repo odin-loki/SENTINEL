@@ -79,13 +79,14 @@ QString DataExporter::leadsToMarkdown(const QVector<InvestigativeLead>& leads,
     out << "| Rank | Category | Headline | Confidence | Method |\n";
     out << "|------|----------|----------|------------|--------|\n";
     for (const auto& l : leads) {
-        QString cat = l.category;  cat.replace('|', '/'); cat.replace('\n', ' ');
-        QString hd  = l.headline;  hd.replace('|', '/');  hd.replace('\n', ' ');
+        QString cat  = l.category;          cat.replace('|', '/');  cat.replace('\n', ' ');
+        QString hd   = l.headline;          hd.replace('|', '/');   hd.replace('\n', ' ');
+        QString meth = l.confidenceMethod;  meth.replace('|', '/'); meth.replace('\n', ' ');
         out << "| " << l.rank
             << " | " << cat
             << " | " << hd
             << " | " << QString::number(l.confidence * 100, 'f', 1) << "%"
-            << " | " << l.confidenceMethod
+            << " | " << meth
             << " |\n";
     }
     if (!leads.isEmpty()) {

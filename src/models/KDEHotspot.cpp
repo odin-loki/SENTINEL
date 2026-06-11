@@ -37,8 +37,9 @@ double KDEHotspot::silvermanBandwidth(const QVector<double>& values, double mult
     var /= (n - 1.0);
     const double sigma = std::sqrt(var);
 
-    // h = 1.06 * σ * n^(-1/5)
-    return multiplier * 1.06 * sigma * std::pow(n, -0.2);
+    // h = 1.06 * σ * n^(-1/5); clamp to avoid zero bandwidth on identical points
+    const double h = multiplier * 1.06 * sigma * std::pow(n, -0.2);
+    return std::max(h, 1e-6);
 }
 
 // ─── KDE surface ─────────────────────────────────────────────────────────────
@@ -102,6 +103,8 @@ QVector<HotspotRegion> KDEHotspot::findHotspots(
 {
     if (locations.isEmpty()) return {};
 
+    const int effectiveTopK = std::min(topK, static_cast<int>(locations.size()));
+
     const auto surface = compute(locations, latMin, latMax, lonMin, lonMax);
     const int N = m_gridN;
     const double dLat = (latMax - latMin) / N;
@@ -123,7 +126,7 @@ QVector<HotspotRegion> KDEHotspot::findHotspots(
     QVector<QPair<double,double>> selectedCentroids;
 
     for (const auto& cell : cells) {
-        if (regions.size() >= topK) break;
+        if (regions.size() >= effectiveTopK) break;
         if (cell.density <= 0.0) break;
 
         const double peakLat = latMin + (cell.r + 0.5) * dLat;

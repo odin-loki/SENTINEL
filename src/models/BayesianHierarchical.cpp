@@ -134,13 +134,13 @@ ZonePosterior BayesianHierarchical::posteriorForZone(const QString& zoneId) cons
 {
     auto it = m_posteriors.find(zoneId);
     if (it == m_posteriors.end()) {
-        // Return prior-only posterior for unseen zone
+        // Return prior for a zone with no observations (no exposure adjustment)
         ZonePosterior zp;
         zp.zoneId       = zoneId;
         zp.alphaPrior   = m_alpha0;
         zp.betaPrior    = m_beta0;
         zp.alphaPost    = m_alpha0;
-        zp.betaPost     = m_beta0 + m_exposureDays;
+        zp.betaPost     = m_beta0;
         zp.posteriorMean = zp.alphaPost / zp.betaPost;
         zp.posteriorVar  = zp.alphaPost / (zp.betaPost * zp.betaPost);
         zp.credibleLow  = gammaPPF(zp.alphaPost, zp.betaPost, 0.05);

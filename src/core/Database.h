@@ -25,6 +25,8 @@ public:
     bool insertEvent(const CrimeEvent& ev);
     bool updateEvent(const CrimeEvent& ev);
     bool deleteEvent(const QString& id);
+    // Batch insert wrapped in a single transaction — much faster for bulk loads
+    int  batchInsert(const QVector<CrimeEvent>& events);
     QVector<CrimeEvent> queryEvents(const QString& crimeType = {},
                                     const QDateTime& from = {},
                                     const QDateTime& to = {},

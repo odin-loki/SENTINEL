@@ -22,8 +22,15 @@ struct GroupStats {
     double  flagRate   = 0.0;  // nFlagged / nEvents
     double  meanPred   = 0.0;
     double  actualRate = 0.0;
-    int     nTP        = 0;    // true positives (yTrue=1 and yPred >= threshold)
+    int     nTP        = 0;    // true positives  (yTrue=1 and yPred >= 0.5)
+    int     nFP        = 0;    // false positives (yTrue=0 and yPred >= 0.5)
+    int     nFN        = 0;    // false negatives (yTrue=1 and yPred <  0.5)
+    int     nTN        = 0;    // true negatives  (yTrue=0 and yPred <  0.5)
     int     nActualPos = 0;    // total actual positives (yTrue=1)
+    // Derived rates (computed by groupStats())
+    double  falsePositiveRate = 0.0;  // FP / (FP + TN)
+    double  falseNegativeRate = 0.0;  // FN / (FN + TP)
+    double  truePositiveRate  = 0.0;  // TP / (TP + FN)
 };
 
 class BiasAuditor {

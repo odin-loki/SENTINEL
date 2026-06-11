@@ -9,15 +9,13 @@ class ProvenanceLogDeepTest : public QObject
     Q_OBJECT
 
 private:
-    static ProvenanceLog populatedLog(const QString& eventId = QStringLiteral("E1"))
+    static void populateLog(ProvenanceLog& log, const QString& eventId = QStringLiteral("E1"))
     {
-        ProvenanceLog log;
         log.record(eventId, QStringLiteral("ingest"),    QStringLiteral("csv_import"),   QStringLiteral("Imported from UK Police CSV"));
         log.record(eventId, QStringLiteral("nlp"),       QStringLiteral("classify"),     QStringLiteral("CrimeClassifier: burglary 0.92"));
         log.record(eventId, QStringLiteral("model"),     QStringLiteral("poisson_fit"),  QStringLiteral("PoissonBaseline lambda=0.5"));
         log.record(eventId, QStringLiteral("inference"), QStringLiteral("hint_gen"),     QStringLiteral("HintEngine generated 3 leads"));
         log.record(eventId, QStringLiteral("output"),    QStringLiteral("lead_export"),  QStringLiteral("LeadReportGenerator: Markdown"));
-        return log;
     }
 
 private slots:
@@ -36,7 +34,7 @@ private slots:
     // ── 2. chain() returns all entries for given eventId ─────────────────────
     void testChainReturnsAllForEvent()
     {
-        auto log = populatedLog(QStringLiteral("E42"));
+        ProvenanceLog log; populateLog(log, QStringLiteral("E42"));
         const auto ch = log.chain(QStringLiteral("E42"));
         QVERIFY2(ch.size() == 5,
                  qPrintable(QStringLiteral("Expected 5 entries in chain, got %1").arg(ch.size())));
@@ -55,7 +53,7 @@ private slots:
     // ── 4. filterByStage() returns only matching stage ────────────────────────
     void testFilterByStage()
     {
-        auto log = populatedLog();
+        ProvenanceLog log; populateLog(log);
         const auto filtered = log.filterByStage(QStringLiteral("nlp"));
         QVERIFY2(filtered.size() == 1, "filterByStage(nlp) should return 1 entry");
         QVERIFY2(filtered.first().stage == QStringLiteral("nlp"), "Stage mismatch");
@@ -64,7 +62,7 @@ private slots:
     // ── 5. recent(n) returns at most n entries ────────────────────────────────
     void testRecentRespectsLimit()
     {
-        auto log = populatedLog();
+        ProvenanceLog log; populateLog(log);
         const auto r = log.recent(3);
         QVERIFY2(r.size() <= 3,
                  qPrintable(QStringLiteral("recent(3) returned %1").arg(r.size())));
@@ -101,7 +99,7 @@ private slots:
     // ── 8. clear() resets all entries ────────────────────────────────────────
     void testClearResetsAll()
     {
-        auto log = populatedLog();
+        ProvenanceLog log; populateLog(log);
         QVERIFY(log.count() > 0);
         log.clear();
         QCOMPARE(log.count(), 0);
@@ -111,7 +109,7 @@ private slots:
     // ── 9. formatChain: non-empty for populated log ───────────────────────────
     void testFormatChainNonEmpty()
     {
-        auto log = populatedLog(QStringLiteral("E77"));
+        ProvenanceLog log; populateLog(log, QStringLiteral("E77"));
         const QString formatted = log.formatChain(QStringLiteral("E77"));
         QVERIFY2(!formatted.isEmpty(), "formatChain should produce non-empty text");
         QVERIFY2(formatted.contains(QStringLiteral("ingest")), "formatChain should mention stages");
@@ -120,12 +118,12 @@ private slots:
     // ── 10. formatHtml: contains HTML tags ───────────────────────────────────
     void testFormatHtmlContainsTags()
     {
-        auto log = populatedLog(QStringLiteral("E99"));
+        ProvenanceLog log; populateLog(log, QStringLiteral("E99"));
         const QString html = log.formatHtml(QStringLiteral("E99"));
         QVERIFY2(html.contains(QStringLiteral("<")) && html.contains(QStringLiteral(">")),
                  "formatHtml should contain HTML tags");
     }
 };
 
-QTEST_MAIN(ProvenanceLogDeepTest)
+QTEST_GUILESS_MAIN(ProvenanceLogDeepTest)
 #include "test_provenance_log_deep.moc"

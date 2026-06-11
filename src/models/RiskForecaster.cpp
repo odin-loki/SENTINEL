@@ -91,6 +91,20 @@ ZoneForecast RiskForecaster::forecastZone(const QString& zoneId,
     ZoneForecast zf;
     zf.zoneId = zoneId;
 
+    if (!m_poisson.isFitted()) {
+        for (int d = 0; d < m_horizonDays; ++d) {
+            ForecastDay day;
+            day.zoneId   = zoneId;
+            day.date     = from.addDays(d).date();
+            day.rank     = d + 1;
+            day.riskScore = 0.0;
+            zf.days.append(day);
+        }
+        zf.weeklyRisk = 0.0;
+        zf.alertLevel = 0;
+        return zf;
+    }
+
     for (int d = 0; d < m_horizonDays; ++d) {
         const QDateTime dt = from.addDays(d);
         const QDate date   = dt.date();
@@ -122,10 +136,17 @@ ZoneForecast RiskForecaster::forecastZone(const QString& zoneId,
         zf.days.append(day);
     }
 
-    // Weekly risk = mean daily risk
+    // Weekly risk = mean daily risk; find peak day
     if (!zf.days.isEmpty()) {
         double sum = 0.0;
-        for (const auto& day : zf.days) sum += day.riskScore;
+        double peakRisk = -1.0;
+        for (int i = 0; i < zf.days.size(); ++i) {
+            sum += zf.days[i].riskScore;
+            if (zf.days[i].riskScore > peakRisk) {
+                peakRisk       = zf.days[i].riskScore;
+                zf.peakDayIndex = i;
+            }
+        }
         zf.weeklyRisk = sum / zf.days.size();
     }
 
