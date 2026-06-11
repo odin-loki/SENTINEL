@@ -15,7 +15,7 @@
 #include <QDateTime>
 #include <algorithm>
 
-// The 18 evidence types shown in the scorer panel
+// The 18 evidence types shown in the scorer panel (display labels)
 static const QStringList EVIDENCE_TYPES = {
     "Physical Evidence at Scene",
     "Witness Testimony",
@@ -35,6 +35,28 @@ static const QStringList EVIDENCE_TYPES = {
     "Alibi Contradiction",
     "Expert Analysis Report",
     "Statistical Anomaly Flag"
+};
+
+// Parallel EvidenceScorer LR-table keys for each checkbox (same order as EVIDENCE_TYPES)
+static const QStringList EVIDENCE_SCORER_KEYS = {
+    QStringLiteral("tool_mark_match"),
+    QStringLiteral("eyewitness_identification_ideal"),
+    QStringLiteral("cctv_clear_face"),
+    QStringLiteral("digital_device_at_scene"),
+    QStringLiteral("dna_match_full_profile"),
+    QStringLiteral("fingerprint_match_10pt"),
+    QStringLiteral("vehicle_at_scene"),
+    QStringLiteral("modus_operandi_match_high"),
+    QStringLiteral("network_link_direct"),
+    QStringLiteral("geographic_profile_in_peak_zone"),
+    QStringLiteral("phone_records_at_scene"),
+    QStringLiteral("prior_conviction_same_type"),
+    QStringLiteral("network_link_direct"),
+    QStringLiteral("phone_records_at_scene"),
+    QStringLiteral("informant_tip_reliable"),
+    QStringLiteral("no_alibi"),
+    QStringLiteral("informant_tip_reliable"),
+    QStringLiteral("blood_type_match"),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -480,8 +502,9 @@ void LeadsWidget::onRunEvidenceScorer()
 {
     // Build evidence map from checkboxes
     QMap<QString, bool> evidencePresence;
-    for (int i = 0; i < m_evidenceChecks.size() && i < EVIDENCE_TYPES.size(); ++i) {
-        evidencePresence[EVIDENCE_TYPES[i]] = m_evidenceChecks[i]->isChecked();
+    for (int i = 0; i < m_evidenceChecks.size() && i < EVIDENCE_SCORER_KEYS.size(); ++i) {
+        if (m_evidenceChecks[i]->isChecked())
+            evidencePresence[EVIDENCE_SCORER_KEYS[i]] = true;
     }
 
     const double prior = m_priorSpin->value();

@@ -259,6 +259,8 @@ void EventsTableWidget::onFilterChanged()
                         return !e.eventId.contains(search, Qt::CaseInsensitive)
                             && !e.crimeType.contains(search, Qt::CaseInsensitive)
                             && !e.locationRaw.value_or("").contains(search, Qt::CaseInsensitive)
+                            && !e.addressNormalised.value_or("").contains(search, Qt::CaseInsensitive)
+                            && !e.locationDescription.contains(search, Qt::CaseInsensitive)
                             && !e.suburb.contains(search, Qt::CaseInsensitive)
                             && !e.narrative.value_or("").contains(search, Qt::CaseInsensitive);
                     }),

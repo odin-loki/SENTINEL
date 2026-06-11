@@ -58,11 +58,15 @@ CsvColumnMap CsvImporter::detectColumns(const QStringList& headers)
     CsvColumnMap map;
     for (int i = 0; i < headers.size(); ++i) {
         const QString& h = headers[i];
-        if (map.idCol < 0 && headerMatches(h, {QStringLiteral("id"), QStringLiteral("case_number"), QStringLiteral("case number"), QStringLiteral("incident"), QStringLiteral("crime id")}))
-            map.idCol = i;
-        else if (map.dateCol < 0 && headerMatches(h, {QStringLiteral("date"), QStringLiteral("occurred"), QStringLiteral("datetime"), QStringLiteral("timestamp"), QStringLiteral("reported_date"), QStringLiteral("month")}))
+        if (map.dateCol < 0 && headerMatches(h, {QStringLiteral("date"), QStringLiteral("occurred"), QStringLiteral("datetime"), QStringLiteral("timestamp"), QStringLiteral("reported_date"), QStringLiteral("month")}))
             map.dateCol = i;
-        else if (map.crimeTypeCol < 0 && headerMatches(h, {QStringLiteral("crime_type"), QStringLiteral("primary_type"), QStringLiteral("category"), QStringLiteral("offense"), QStringLiteral("offence"), QStringLiteral("crime type"), QStringLiteral("crimetype"), QStringLiteral("type")}))
+        else if (map.idCol < 0 && headerMatches(h, {QStringLiteral("id"), QStringLiteral("case_number"), QStringLiteral("case number"), QStringLiteral("incident"), QStringLiteral("crime id")})
+                 && !h.toLower().contains(QStringLiteral("date")))
+            map.idCol = i;
+        else if (map.locationCol < 0 && headerMatches(h, {QStringLiteral("location"), QStringLiteral("location_description"), QStringLiteral("location description")}))
+            map.locationCol = i;
+        else if (map.crimeTypeCol < 0 && headerMatches(h, {QStringLiteral("crime_type"), QStringLiteral("primary_type"), QStringLiteral("category"), QStringLiteral("offense"), QStringLiteral("offence"), QStringLiteral("crime type"), QStringLiteral("crimetype"), QStringLiteral("type")})
+                 && !h.toLower().contains(QStringLiteral("location")))
             map.crimeTypeCol = i;
         else if (map.descCol < 0 && headerMatches(h, {QStringLiteral("description"), QStringLiteral("narrative"), QStringLiteral("detail"), QStringLiteral("summary")}))
             map.descCol = i;
@@ -74,8 +78,6 @@ CsvColumnMap CsvImporter::detectColumns(const QStringList& headers)
             map.addressCol = i;
         else if (map.outcomeCol < 0 && headerMatches(h, {QStringLiteral("outcome"), QStringLiteral("resolution"), QStringLiteral("disposition"), QStringLiteral("arrest"), QStringLiteral("last outcome category")}))
             map.outcomeCol = i;
-        else if (map.locationCol < 0 && headerMatches(h, {QStringLiteral("location"), QStringLiteral("location_description"), QStringLiteral("location description")}))
-            map.locationCol = i;
     }
     return map;
 }

@@ -95,9 +95,10 @@ QString DataExporter::leadsToMarkdown(const QVector<InvestigativeLead>& leads,
             out << "### " << l.rank << ". " << l.headline << "\n\n";
             out << l.detail << "\n\n";
             if (!l.provenance.empty()) {
-                out << "**Provenance:** ";
-                for (const auto& p : l.provenance) out << p << " → ";
-                out << "\n\n";
+                QStringList provParts;
+                for (const auto& p : l.provenance)
+                    provParts.append(p);
+                out << "**Provenance:** " << provParts.join(QStringLiteral(" → ")) << "\n\n";
             }
         }
     }
@@ -219,6 +220,10 @@ QJsonArray DataExporter::provenanceToJson(const QVector<ProvenanceEntry>& chain)
         obj[QStringLiteral("action")]    = e.action;
         obj[QStringLiteral("detail")]    = e.detail;
         obj[QStringLiteral("dataHash")]  = e.dataHash;
+        if (!e.source.isEmpty())
+            obj[QStringLiteral("source")] = e.source;
+        if (!e.model.isEmpty())
+            obj[QStringLiteral("model")] = e.model;
         arr.append(obj);
     }
     return arr;

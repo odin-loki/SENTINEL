@@ -1327,3 +1327,74 @@ sentinel_test(ensemble_predictor_deep5 test_ensemble_predictor_deep5.cpp)
 set_tests_properties(ensemble_predictor_deep5 PROPERTIES TIMEOUT 30)
 sentinel_test(poisson_baseline_deep7 test_poisson_baseline_deep7.cpp)
 set_tests_properties(poisson_baseline_deep7 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 19: LeadsWidget, EventsTableWidget, MainWindow ────────
+qt_add_executable(test_leads_widget_deep3
+    test_leads_widget_deep3.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+)
+target_include_directories(test_leads_widget_deep3 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_leads_widget_deep3 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_leads_widget_deep3 COMMAND test_leads_widget_deep3 -platform offscreen)
+set_tests_properties(test_leads_widget_deep3 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+qt_add_executable(test_events_table_deep4
+    test_events_table_deep4.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+)
+target_include_directories(test_events_table_deep4 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_events_table_deep4 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_events_table_deep4 COMMAND test_events_table_deep4 -platform offscreen)
+set_tests_properties(test_events_table_deep4 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+qt_add_executable(test_main_window_deep4
+    test_main_window_deep4.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MainWindow.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AuditLogWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
+)
+target_include_directories(test_main_window_deep4 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_main_window_deep4 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_main_window_deep4 COMMAND test_main_window_deep4 -platform offscreen)
+set_tests_properties(test_main_window_deep4 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+# ── Deep audit iteration 19: Database, CsvImporter, AppConfig ─────────────────
+sentinel_test(database_deep5 test_database_deep5.cpp)
+set_tests_properties(database_deep5 PROPERTIES TIMEOUT 30)
+sentinel_test(csv_importer_deep6 test_csv_importer_deep6.cpp)
+set_tests_properties(csv_importer_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(appconfig_deep5 test_appconfig_deep5.cpp)
+set_tests_properties(appconfig_deep5 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 19: ProvenanceLog, DataExporter, DataQualityScorer ─────
+sentinel_test(provenance_log_deep5 test_provenance_log_deep5.cpp)
+set_tests_properties(provenance_log_deep5 PROPERTIES TIMEOUT 30)
+sentinel_test(data_exporter_deep5 test_data_exporter_deep5.cpp)
+set_tests_properties(data_exporter_deep5 PROPERTIES TIMEOUT 30)
+sentinel_test(data_quality_deep4 test_data_quality_deep4.cpp)
+set_tests_properties(data_quality_deep4 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 19: BayesianHierarchical, GPRegression, CalibrationAnalyser ─
+sentinel_test(bayesian_hierarchical_deep5 test_bayesian_hierarchical_deep5.cpp)
+set_tests_properties(bayesian_hierarchical_deep5 PROPERTIES TIMEOUT 30)
+sentinel_test(gp_regression_deep6 test_gp_regression_deep6.cpp)
+set_tests_properties(gp_regression_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(calibration_analyser_deep4 test_calibration_analyser_deep4.cpp)
+set_tests_properties(calibration_analyser_deep4 PROPERTIES TIMEOUT 30)
