@@ -80,8 +80,10 @@ void PoissonBaseline::fit(const QVector<EventRecord>& events)
 
         // Overdispersion: variance substantially exceeds mean
         if (var > mean && mean > 0.0) {
+            // NB(r, p) with PMF ∝ p^k (1-p)^r: E[X]=r*p/(1-p), Var[X]=r*p/(1-p)²
+            // Method of moments: r = μ²/(σ²-μ), p = μ/(μ+r) = 1 - μ/σ²
             double r = mean * mean / (var - mean);
-            double p = mean / var;
+            double p = mean / (mean + r);
             m_nbParams[it.key()] = {r, p};
         }
     }

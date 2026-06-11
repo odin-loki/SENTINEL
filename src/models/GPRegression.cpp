@@ -83,9 +83,9 @@ QVector<double> GPRegression::solveLT(const QVector<QVector<double>>& L,
 
 void GPRegression::setKernelParams(double sigma2, double lengthscale, double noiseSigma2)
 {
-    m_sigma2      = sigma2;
-    m_lengthscale = lengthscale;
-    m_noiseSigma2 = noiseSigma2;
+    m_sigma2      = std::max(sigma2, 1e-12);
+    m_lengthscale = std::max(lengthscale, 1e-12);
+    m_noiseSigma2 = std::max(noiseSigma2, 0.0);
     m_fitted      = false;   // must re-fit after changing hyperparameters
 }
 

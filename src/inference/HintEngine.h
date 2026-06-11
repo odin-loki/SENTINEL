@@ -20,6 +20,8 @@ struct HintEngineInput {
 
 class HintEngine {
 public:
+    static constexpr int kMaxLeads = 50;
+
     // Generate ranked leads from all inference inputs
     QVector<InvestigativeLead> generate(const HintEngineInput& input) const;
 

@@ -91,7 +91,8 @@ sentinel_test(test_nlp_pipeline       test_nlp_pipeline.cpp)
 sentinel_test(test_bayesian_hierarchical test_bayesian_hierarchical.cpp)
 sentinel_test(test_full_pipeline         test_full_pipeline.cpp)
 sentinel_test(test_anomaly_geo          test_anomaly_geo.cpp)
-sentinel_test(test_database_stress      test_database_stress.cpp)
+sentinel_test(database_stress test_database_stress.cpp)
+set_tests_properties(database_stress PROPERTIES TIMEOUT 60)
 sentinel_test(test_mo_export_e2e       test_mo_export_e2e.cpp)
 sentinel_test(test_csv_temporal_hint    test_csv_temporal_hint.cpp)
 sentinel_test(test_data_ingestion       test_data_ingestion.cpp)
@@ -471,6 +472,7 @@ sentinel_test(test_mo_performance        test_mo_performance.cpp)
 sentinel_test(test_co_offending_analyser  test_co_offending_analyser.cpp)
 sentinel_test(test_evidence_scorer        test_evidence_scorer.cpp)
 sentinel_test(test_hint_engine_deep       test_hint_engine_deep.cpp)
+sentinel_test(hint_anomaly_evidence       test_hint_anomaly_evidence.cpp)
 sentinel_test(test_risk_forecaster_bounds  test_risk_forecaster_bounds.cpp)
 sentinel_test(test_database_concurrent     test_database_concurrent.cpp)
 sentinel_test(test_geographic_profiler_deep test_geographic_profiler_deep.cpp)
@@ -515,6 +517,9 @@ set_tests_properties(hawkes_ensemble_deep PROPERTIES TIMEOUT 60)
 
 sentinel_test(test_gp_regression_deep2      test_gp_regression_deep2.cpp)
 set_tests_properties(test_gp_regression_deep2 PROPERTIES TIMEOUT 60)
+
+sentinel_test(gp_bayesian_deep              test_gp_bayesian_deep.cpp)
+set_tests_properties(gp_bayesian_deep PROPERTIES TIMEOUT 60)
 
 # ── TemporalHeatmapWidget data-model tests ────────────────────────────────────
 qt_add_executable(test_temporal_heatmap_data
@@ -720,3 +725,6 @@ set_tests_properties(ui_map_audit_heatmap PROPERTIES LABELS "ui")
 
 sentinel_test(nearrepeat_csv_mo test_nearrepeat_csv_mo.cpp)
 set_tests_properties(nearrepeat_csv_mo PROPERTIES TIMEOUT 30)
+
+sentinel_test(provenance_quality_nlp test_provenance_quality_nlp.cpp)
+set_tests_properties(provenance_quality_nlp PROPERTIES TIMEOUT 30)

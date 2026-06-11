@@ -24,6 +24,7 @@ public:
     // Event CRUD
     bool insertEvent(const CrimeEvent& ev);
     bool updateEvent(const CrimeEvent& ev);
+    bool deleteEvent(const QString& id);
     QVector<CrimeEvent> queryEvents(const QString& crimeType = {},
                                     const QDateTime& from = {},
                                     const QDateTime& to = {},
@@ -103,7 +104,7 @@ private:
     QSqlDatabase m_db;
     QString m_connName;   // unique per-instance to avoid Qt SQL pool collisions
     QString m_path;
-    QString m_lastError;
+    mutable QString m_lastError;
 
     static CrimeEvent rowToEvent(const QSqlQuery& q);
     static InvestigativeLead rowToLead(const QSqlQuery& q);

@@ -324,6 +324,9 @@ QVector<InvestigativeLead> HintEngine::generate(const HintEngineInput& input) co
     detectContradictions(all);
     rerankLeads(all, input.dataQuality);
 
+    if (all.size() > kMaxLeads)
+        all.resize(kMaxLeads);
+
     qCInfo(lcInference) << "Hint engine generated" << all.size()
                         << "leads for event" << input.event.eventId;
     return all;

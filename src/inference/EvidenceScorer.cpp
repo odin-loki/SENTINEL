@@ -2,6 +2,21 @@
 #include <algorithm>
 #include <cmath>
 
+namespace {
+
+// Interpolate LR toward neutral (1.0) based on source reliability (for display).
+// reliability=0 → neutral (LR=1); reliability=1 → full LR applied.
+// NOTE: the score() methods use raw LR for Bayesian updates; this helper
+// is provided for external use or future weighted variants.
+double reliabilityWeightedLR(double lr, double reliability)
+{
+    if (reliability <= 0.0) return 1.0;
+    if (lr <= 0.0) return 0.0;
+    return std::pow(lr, reliability);
+}
+
+} // namespace
+
 EvidenceScorer::EvidenceScorer()
 {
     buildLRTable();
@@ -101,7 +116,7 @@ EvidenceScorer::Result EvidenceScorer::score(double priorProbability,
 
         auto lrIt = m_lrTable.find(type);
         const double lr = (lrIt != m_lrTable.end()) ? lrIt->lr : 1.0;
-        const double effectiveLR = present ? lr : 1.0 / lr;
+        const double effectiveLR = present ? lr : (lr > 1e-12 ? 1.0 / lr : 1.0);
 
         runningOdds *= effectiveLR;
         overallLR   *= effectiveLR;
@@ -135,13 +150,13 @@ QVector<EvidenceWeight> EvidenceScorer::score(const QVector<EvidenceItem>& evide
     for (const auto& item : evidence) {
         auto it = m_lrTable.find(item.type);
         const double lr = (it != m_lrTable.end()) ? it->lr : 1.0;
-        const double reliability = (it != m_lrTable.end()) ? it->reliability : 0.5;
+        const double reliability = (it != m_lrTable.end()) ? it->reliability : 0.0;
         const QString desc = (it != m_lrTable.end())
                              ? it->description
                              : QStringLiteral("Unknown evidence type");
 
-        // If evidence is absent, use inverse LR
-        const double effectiveLR = item.present ? lr : 1.0 / lr;
+        // Use raw LR for Bayesian update; reliability stored for informational display only
+        const double effectiveLR = item.present ? lr : (lr > 1e-12 ? 1.0 / lr : 1.0);
         runningOdds *= effectiveLR;
 
         const double posteriorProb = runningOdds / (1.0 + runningOdds);

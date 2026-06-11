@@ -109,11 +109,17 @@ double AnomalyDetector::localDensityRatio(const AnomalyFeatureVector& ev,
 {
     if (data.size() < 2) return 1.0;
 
-    // Distances from ev to all data points
+    // Distances from ev to all other points (exclude self — zero distance
+    // would otherwise deflate k-NN averages and cap LOF at ~1.0).
     QVector<double> dists;
     dists.reserve(data.size());
-    for (const auto& d : data)
-        dists.append(euclidean4D(ev, d));
+    for (const auto& d : data) {
+        const double dist = euclidean4D(ev, d);
+        if (dist < 1e-12) continue;
+        dists.append(dist);
+    }
+
+    if (dists.isEmpty()) return 1.0;
 
     const int actualK = std::min(k, static_cast<int>(dists.size()));
     std::partial_sort(dists.begin(), dists.begin() + actualK, dists.end());

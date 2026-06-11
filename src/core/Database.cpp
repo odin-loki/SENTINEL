@@ -152,7 +152,8 @@ void Database::createSchema()
 
     for (const QString& stmt : ddl) {
         if (!q.exec(stmt)) {
-            qWarning() << "[Database] Schema DDL failed:" << q.lastError().text();
+            m_lastError = q.lastError().text();
+            qWarning() << "[Database] Schema DDL failed:" << m_lastError;
         }
     }
 
@@ -359,6 +360,19 @@ bool Database::updateEvent(const CrimeEvent& ev)
     return insertEvent(ev);
 }
 
+bool Database::deleteEvent(const QString& id)
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral("DELETE FROM events WHERE event_id = :id"));
+    q.bindValue(QStringLiteral(":id"), id);
+    if (!q.exec()) {
+        m_lastError = q.lastError().text();
+        qCWarning(lcDatabase) << "deleteEvent failed:" << m_lastError;
+        return false;
+    }
+    return true;
+}
+
 QVector<CrimeEvent> Database::queryEvents(const QString& crimeType,
                                            const QDateTime& from,
                                            const QDateTime& to,
@@ -407,7 +421,8 @@ QVector<CrimeEvent> Database::queryEvents(const QString& crimeType,
 
     QVector<CrimeEvent> results;
     if (!q.exec()) {
-        qWarning() << "[Database] queryEvents failed:" << q.lastError().text();
+        m_lastError = q.lastError().text();
+        qWarning() << "[Database] queryEvents failed:" << m_lastError;
         return results;
     }
     while (q.next())
@@ -487,7 +502,8 @@ QVector<InvestigativeLead> Database::queryLeads(const QString& eventId) const
 
     QVector<InvestigativeLead> results;
     if (!q.exec()) {
-        qWarning() << "[Database] queryLeads failed:" << q.lastError().text();
+        m_lastError = q.lastError().text();
+        qWarning() << "[Database] queryLeads failed:" << m_lastError;
         return results;
     }
     while (q.next())
@@ -528,13 +544,14 @@ Database::queryAudit(int limit) const
     QSqlQuery q(m_db);
     q.prepare(QStringLiteral(
         "SELECT ts, event_id, action, detail FROM audit_log "
-        "ORDER BY ts DESC LIMIT :limit"
+        "ORDER BY ts DESC, id DESC LIMIT :limit"
     ));
     q.bindValue(QStringLiteral(":limit"), limit);
 
     QVector<std::tuple<QDateTime,QString,QString,QString>> results;
     if (!q.exec()) {
-        qWarning() << "[Database] queryAudit failed:" << q.lastError().text();
+        m_lastError = q.lastError().text();
+        qWarning() << "[Database] queryAudit failed:" << m_lastError;
         return results;
     }
     while (q.next()) {
@@ -561,7 +578,8 @@ QMap<QString,int> Database::crimeTypeCounts() const
         "WHERE crime_type IS NOT NULL "
         "GROUP BY crime_type ORDER BY COUNT(*) DESC")))
     {
-        qWarning() << "[Database] crimeTypeCounts failed:" << q.lastError().text();
+        m_lastError = q.lastError().text();
+        qWarning() << "[Database] crimeTypeCounts failed:" << m_lastError;
         return result;
     }
     while (q.next())
@@ -587,7 +605,8 @@ Database::eventsByHour(const QDateTime& from, const QDateTime& to) const
 
     QVector<std::pair<QDateTime,int>> result;
     if (!q.exec()) {
-        qWarning() << "[Database] eventsByHour failed:" << q.lastError().text();
+        m_lastError = q.lastError().text();
+        qWarning() << "[Database] eventsByHour failed:" << m_lastError;
         return result;
     }
     while (q.next()) {
@@ -737,7 +756,8 @@ QVector<CrimeEvent> Database::queryEvents(const QString& crimeType,
 
     QVector<CrimeEvent> results;
     if (!q.exec()) {
-        qWarning() << "[Database] queryEvents(QDate) failed:" << q.lastError().text();
+        m_lastError = q.lastError().text();
+        qWarning() << "[Database] queryEvents(QDate) failed:" << m_lastError;
         return results;
     }
     while (q.next())

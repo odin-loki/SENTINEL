@@ -32,6 +32,7 @@ CrimeClassifier::CrimeClassifier()
     m_threatKeywords = {
         QStringLiteral("threat"),   QStringLiteral("kill"),      QStringLiteral("attack"),
         QStringLiteral("bomb"),     QStringLiteral("shoot"),     QStringLiteral("stab"),
+        QStringLiteral("stabbed"),  QStringLiteral("shot"),      QStringLiteral("killed"),
         QStringLiteral("fire"),     QStringLiteral("destroy"),   QStringLiteral("retaliate"),
         QStringLiteral("hurt"),     QStringLiteral("harm"),      QStringLiteral("murder"),
         QStringLiteral("execute"),
