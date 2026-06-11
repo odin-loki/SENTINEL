@@ -22,16 +22,24 @@ double GeographicProfiler::rossmoContrib(double gridLat, double gridLon,
     const double dLon = gridLon - crimeLon;
     const double dist = std::sqrt(dLat * dLat + dLon * dLon);
 
+    // Rossmo's CGT formula (Rossmo 1995):
+    //   φ = 1 if d > B, 0 otherwise
+    //   contribution = φ/d^f  +  (1-φ) * B^(g-f) / (2B-d)^g
+    //
+    // d <= B  (buffer zone): anchor is too close to crime site → lower probability
+    //         uses buffer term B^(g-f)/(2B-d)^g
+    // d >  B  (normal range): standard distance decay 1/d^f
+    // d >= 4B (far field): approximate as negligible
+
     if (dist <= m_bufferDeg) {
-        // Near zone (safety buffer) — Rossmo 1/d^f
-        const double safeDist = std::max(dist, 1e-8);
-        return 1.0 / std::pow(safeDist, m_f);
-    } else if (dist < 2.0 * m_bufferDeg) {
-        // Far zone (B < d < 2B) — Rossmo B^(g-f)/(2B-d)^g
+        // Buffer zone: Rossmo second term
         const double denom = std::max(2.0 * m_bufferDeg - dist, 1e-10);
         return std::pow(m_bufferDeg, m_g - m_f) / std::pow(denom, m_g);
+    } else if (dist < 4.0 * m_bufferDeg) {
+        // Normal distance decay: Rossmo first term
+        return 1.0 / std::pow(dist, m_f);
     } else {
-        // Beyond 2B — formula is undefined; use negligible decay
+        // Far field — distance decay below practical threshold
         return 0.0;
     }
 }

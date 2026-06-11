@@ -1,4 +1,4 @@
-// test_risk_forecaster_bounds.cpp — Deep bounds / invariant tests for RiskForecaster
+// test_risk_forecaster_bounds.cpp ï¿½ Deep bounds / invariant tests for RiskForecaster
 #include <QTest>
 #include <QCoreApplication>
 #include <QDateTime>

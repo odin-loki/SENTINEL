@@ -268,11 +268,11 @@ Convert raw timestamps into a feature vector suitable for statistical models.
 | Hour of day | `sin(2π·h/24)`, `cos(2π·h/24)` |
 | Day of week | `sin(2π·d/7)`, `cos(2π·d/7)` |
 | Month | `sin(2π·m/12)`, `cos(2π·m/12)` |
-| Lunar phase | `sin(2π·phase/29.53)` |
+| Lunar phase | `fmod(days_since_2000-01-06, 29.53) / 29.53` (0=new, 0.5=full) |
 | Sun altitude | `cos(hourAngle) · latitude_factor` |
 | Weekend flag | Binary |
 | Night flag | Binary (22:00–06:00) |
-| Payday proximity | Days to/from 25th of month |
+| Payday proximity | `min(doy%14, 14-doy%14)` � days to nearest fortnightly payday |
 
 ---
 

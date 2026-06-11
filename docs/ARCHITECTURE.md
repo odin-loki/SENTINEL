@@ -85,13 +85,20 @@ generatedAt       QDateTime
 ```
 
 ### `GeographicProfile`
-Rossmo probability surface output.
+Rossmo CGT formula probability surface output.
+
+The CGT formula correctly places the buffer-zone term `B^(g-f)/(2B-d)^g` for `d ≤ B` 
+(suppressing crimes near the offender's anchor) and the distance-decay term `1/d^f` 
+for `B < d < 4B`.
 
 ```
 peakLat, peakLon      double — highest-probability anchor point
 peakProbability       double
 searchArea50pct       double km²
-grid                  QVector<GridCell>
+searchArea80pct       double km²
+gridLats, gridLons    std::vector<double>
+probabilitySurface    std::vector<std::vector<double>> — normalised to sum ≈ 1.0
+method                QString — "rossmo_cgt"
 ```
 
 ### `AnomalySignal`
