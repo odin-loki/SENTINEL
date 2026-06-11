@@ -8,6 +8,7 @@
 #include <QTabWidget>
 #include <QComboBox>
 #include <QLabel>
+#include <QPushButton>
 #include <QUuid>
 #include <memory>
 
@@ -186,7 +187,100 @@ private slots:
         QVERIFY(true);
     }
 
-    // 10. Construction with non-default AppConfig values does not crash
+    // 10. QTabWidget has exactly 7 tabs (Hour, Types, Trend, Benchmark, Calibration, Heatmap, Map)
+    void testTabWidgetHasSevenTabs()
+    {
+        AppConfig cfg;
+        cfg.databasePath = QStringLiteral(":memory:");
+        auto db = makeDB();
+        AnalyticsWidget w(db, cfg);
+        w.resize(900, 600);
+        QTabWidget* tabs = w.findChild<QTabWidget*>();
+        QVERIFY(tabs != nullptr);
+        QCOMPARE(tabs->count(), 7);
+    }
+
+    // 11. Calibration tab (index 4) exists with correct title
+    void testCalibrationTabExists()
+    {
+        AppConfig cfg;
+        cfg.databasePath = QStringLiteral(":memory:");
+        auto db = makeDB();
+        AnalyticsWidget w(db, cfg);
+        w.resize(900, 600);
+        QTabWidget* tabs = w.findChild<QTabWidget*>();
+        QVERIFY(tabs != nullptr);
+        QVERIFY(tabs->count() >= 5);
+        // Tab 4 should be the Calibration tab
+        QCOMPARE(tabs->tabText(4), QStringLiteral("Calibration"));
+    }
+
+    // 12. Switching to the calibration tab does not crash
+    void testCalibrationTabSwitch()
+    {
+        AppConfig cfg;
+        cfg.databasePath = QStringLiteral(":memory:");
+        auto db = makeDB();
+        for (int i = 0; i < 30; ++i)
+            db->insertEvent(makeEvent(51.5 + i * 0.001, -0.1 + i * 0.001));
+        AnalyticsWidget w(db, cfg);
+        w.resize(900, 600);
+        QTabWidget* tabs = w.findChild<QTabWidget*>();
+        QVERIFY(tabs != nullptr);
+        if (tabs->count() >= 5) {
+            tabs->setCurrentIndex(4);
+            QApplication::processEvents();
+        }
+        QVERIFY(true);
+    }
+
+    // 13. Calibration run button exists in the calibration tab
+    void testCalibrationRunButtonExists()
+    {
+        AppConfig cfg;
+        cfg.databasePath = QStringLiteral(":memory:");
+        auto db = makeDB();
+        AnalyticsWidget w(db, cfg);
+        w.resize(900, 600);
+        // Look for any QPushButton with "Calibration" in its text
+        const QList<QPushButton*> buttons = w.findChildren<QPushButton*>();
+        bool found = false;
+        for (const auto* btn : buttons)
+            if (btn->text().contains("Calibration", Qt::CaseInsensitive)) { found = true; break; }
+        QVERIFY(found);
+    }
+
+    // 14. Calibration analysis on populated data does not crash
+    void testCalibrationRunWithData()
+    {
+        AppConfig cfg;
+        cfg.databasePath = QStringLiteral(":memory:");
+        auto db = makeDB();
+
+        // Insert 100 events with varied zones and types
+        const QStringList types{ "burglary", "robbery", "assault", "theft", "vandalism" };
+        for (int i = 0; i < 100; ++i) {
+            auto ev = makeEvent(51.4 + (i % 20) * 0.003, -0.2 + (i % 20) * 0.003, types[i % types.size()]);
+            ev.suburb = QString("Zone%1").arg(i % 5);
+            db->insertEvent(ev);
+        }
+
+        AnalyticsWidget w(db, cfg);
+        w.resize(900, 600);
+
+        // Find and click the calibration run button
+        const QList<QPushButton*> buttons = w.findChildren<QPushButton*>();
+        for (auto* btn : buttons) {
+            if (btn->text().contains("Calibration", Qt::CaseInsensitive)) {
+                btn->click();
+                QApplication::processEvents();
+                break;
+            }
+        }
+        QVERIFY(true);
+    }
+
+    // 15. Construction with non-default AppConfig values does not crash
     void testConstructionNonDefaultConfig()
     {
         AppConfig cfg;

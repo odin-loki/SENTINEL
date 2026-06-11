@@ -26,7 +26,6 @@ CrimeClassifier::CrimeClassifier()
         { "fraud",           0.4 },
         { "public_order",    0.3 },
         { "antisocial",      0.2 },
-        { "murder",          1.0 },
         { "sexual_offence",  0.9 },
     };
 

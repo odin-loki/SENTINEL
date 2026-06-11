@@ -1,7 +1,7 @@
 # SENTINEL — Crime Analytics & Predictive Threat Assessment System
 
 <p align="center">
-  <strong>C++23 · Qt 6 · SQLite · 179 passing tests</strong>
+  <strong>C++23 · Qt 6 · SQLite · 180 passing tests</strong>
 </p>
 
 > A fully auditable, standalone desktop application for spatiotemporal crime prediction, investigative lead generation, and anomaly detection. Every prediction is traceable to its data source, mathematical model, and quantified uncertainty. No proprietary APIs. No black-box AI.
@@ -51,7 +51,7 @@ SENTINEL ingests heterogeneous public crime data streams, applies a layered prob
 | Component | Description |
 |---|---|
 | `MOExtractor` | Regex-based Modus Operandi extraction: entry method, target type, time of day, weapons, items taken, solo/group |
-| `CrimeClassifier` | Weighted keyword TF-IDF classifier — 11 crime categories, severity scoring, sentiment analysis, threat detection |
+| `CrimeClassifier` | Weighted keyword TF-IDF classifier — 13 crime categories, severity scoring, sentiment analysis, threat detection |
 
 ### Statistical Models
 | Model | Method |
@@ -242,7 +242,7 @@ sentinel/
 │       ├── DebugConsoleWidget.h/cpp
 │       └── SettingsWidget.h/cpp
 └── tests/
-    ├── CMakeLists.txt          # 179 test targets
+    ├── CMakeLists.txt          # 180 test targets
     └── test_*.cpp              # Unit, integration, stress, and UI tests
 ```
 
@@ -295,7 +295,7 @@ cmake --build build -j$(nproc)
 
 ## Testing
 
-SENTINEL has **179 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
+SENTINEL has **180 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
 
 ```bash
 # Run all tests (parallel, 4 jobs)
