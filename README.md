@@ -249,7 +249,7 @@ sentinel/
 â”‚       â”œâ”€â”€ DebugConsoleWidget.h/cpp
 â”‚       â””â”€â”€ SettingsWidget.h/cpp
 â””â”€â”€ tests/
-    â”œâ”€â”€ CMakeLists.txt          # 309 test targets
+    â”œâ”€â”€ CMakeLists.txt          # 321 test targets
     â””â”€â”€ test_*.cpp              # Unit, integration, stress, and UI tests
 ```
 
@@ -302,7 +302,7 @@ cmake --build build -j$(nproc)
 
 ## Testing
 
-SENTINEL has **309 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
+SENTINEL has **321 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
 
 ```bash
 # Run all tests (parallel, 4 jobs)
