@@ -55,7 +55,14 @@ LeadReport LeadReportGenerator::generate(const QString& caseId,
     pt.replace(QStringLiteral("## "), QString{});
     pt.replace(QStringLiteral("### "), QString{});
     pt.replace(QStringLiteral("**"), QString{});
-    pt.replace(QStringLiteral("---"), QString{});
+    {
+        QStringList lines = pt.split(QLatin1Char('\n'));
+        for (QString& line : lines) {
+            if (line.trimmed() == QStringLiteral("---"))
+                line.clear();
+        }
+        pt = lines.join(QLatin1Char('\n'));
+    }
     report.plainText = pt;
 
     return report;
@@ -211,6 +218,13 @@ QString LeadReportGenerator::generateHtml(const LeadReport& report)
                 << " &mdash; " << lead.headline.toHtmlEscaped() << "</div>\n";
             if (!lead.detail.isEmpty())
                 out << "  <div class=\"detail-text\">" << lead.detail.toHtmlEscaped() << "</div>\n";
+            if (!lead.contradictions.empty()) {
+                QStringList contr;
+                for (const QString& c : lead.contradictions)
+                    contr.append(c.toHtmlEscaped());
+                out << "  <div class=\"detail-text\"><b>Contradictions:</b> "
+                    << contr.join(QStringLiteral("; ")) << "</div>\n";
+            }
             out << "</div>\n";
         }
     }

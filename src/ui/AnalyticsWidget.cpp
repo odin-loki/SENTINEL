@@ -894,12 +894,16 @@ void AnalyticsWidget::refreshMapView()
     m_mapView->setEvents(events);
 
     // Compute KDE hotspots
-    if (!events.isEmpty()) {
+    if (events.isEmpty()) {
+        m_mapView->clearKDEHotspots();
+    } else {
         QVector<QPair<double,double>> points;
         for (const auto& ev : events) {
-            if (ev.lat.has_value() && ev.lon.has_value() &&
-                ev.lat.value() != 0.0 && ev.lon.value() != 0.0)
-                points.append({ ev.lat.value(), ev.lon.value() });
+            const double lat = ev.lat.has_value() ? ev.lat.value() : ev.latitude;
+            const double lon = ev.lon.has_value() ? ev.lon.value() : ev.longitude;
+            if (ev.lat.has_value() || ev.lon.has_value()
+                || lat != 0.0 || lon != 0.0)
+                points.append({ lat, lon });
         }
         if (points.size() >= 3) {
             // Compute data bounds

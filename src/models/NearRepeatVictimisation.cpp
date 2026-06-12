@@ -43,6 +43,7 @@ QVector<NearRepeatAlert> NearRepeatVictimisation::analyse(
     const QVector<SeriesEvent>& events) const
 {
     if (events.size() < 2) return {};
+    if (m_bandwidthM <= 0.0 || m_windowDays <= 0.0) return {};
 
     QVector<NearRepeatAlert> alerts;
     const int n = events.size();

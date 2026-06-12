@@ -1398,3 +1398,68 @@ sentinel_test(gp_regression_deep6 test_gp_regression_deep6.cpp)
 set_tests_properties(gp_regression_deep6 PROPERTIES TIMEOUT 30)
 sentinel_test(calibration_analyser_deep4 test_calibration_analyser_deep4.cpp)
 set_tests_properties(calibration_analyser_deep4 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 20: MapWidget, AnalyticsWidget, TemporalHeatmapWidget ─
+qt_add_executable(test_map_widget_deep4
+    test_map_widget_deep4.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+)
+target_include_directories(test_map_widget_deep4 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_map_widget_deep4 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_map_widget_deep4 COMMAND test_map_widget_deep4 -platform offscreen)
+set_tests_properties(test_map_widget_deep4 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+qt_add_executable(test_analytics_widget_deep4
+    test_analytics_widget_deep4.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+)
+target_include_directories(test_analytics_widget_deep4 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_analytics_widget_deep4 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_analytics_widget_deep4 COMMAND test_analytics_widget_deep4 -platform offscreen)
+set_tests_properties(test_analytics_widget_deep4 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+qt_add_executable(test_temporal_heatmap_deep4
+    test_temporal_heatmap_deep4.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+)
+target_include_directories(test_temporal_heatmap_deep4 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_temporal_heatmap_deep4 PRIVATE
+    sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
+add_test(NAME test_temporal_heatmap_deep4
+    COMMAND test_temporal_heatmap_deep4 -platform offscreen)
+set_tests_properties(test_temporal_heatmap_deep4 PROPERTIES
+    TIMEOUT 30
+    LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+# ── Deep audit iteration 20: HintEngine, LeadReportGenerator, CoOffendingAnalyser ───
+sentinel_test(hint_engine_deep6 test_hint_engine_deep6.cpp)
+set_tests_properties(hint_engine_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(lead_report_deep6 test_lead_report_deep6.cpp)
+set_tests_properties(lead_report_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(cooffending_deep6 test_cooffending_deep6.cpp)
+set_tests_properties(cooffending_deep6 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 20: AnomalyDetector, EvidenceScorer, GeographicProfiler ─
+sentinel_test(anomaly_detector_deep6 test_anomaly_detector_deep6.cpp)
+set_tests_properties(anomaly_detector_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(evidence_scorer_deep7 test_evidence_scorer_deep7.cpp)
+set_tests_properties(evidence_scorer_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(geographic_profiler_deep6 test_geographic_profiler_deep6.cpp)
+set_tests_properties(geographic_profiler_deep6 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 20: NearRepeatVictimisation, WeatherSource, UKPoliceSource ─
+sentinel_test(near_repeat_deep6 test_near_repeat_deep6.cpp)
+set_tests_properties(near_repeat_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(weather_source_deep4 test_weather_source_deep4.cpp)
+set_tests_properties(weather_source_deep4 PROPERTIES TIMEOUT 30)
+sentinel_test(uk_police_source_deep4 test_uk_police_source_deep4.cpp)
+set_tests_properties(uk_police_source_deep4 PROPERTIES TIMEOUT 30)

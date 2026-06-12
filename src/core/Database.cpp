@@ -333,8 +333,14 @@ bool Database::insertEvent(const CrimeEvent& ev)
     q.bindValue(QStringLiteral(":crime_type"),         strVar(ev.crimeType));
     q.bindValue(QStringLiteral(":crime_subtype"),      optVar(ev.crimeSubtype));
     q.bindValue(QStringLiteral(":location_raw"),       optVar(ev.locationRaw));
-    q.bindValue(QStringLiteral(":lat"),                optVar(ev.lat));
-    q.bindValue(QStringLiteral(":lon"),                optVar(ev.lon));
+    if (ev.lat.has_value())
+        q.bindValue(QStringLiteral(":lat"), ev.lat.value());
+    else
+        q.bindValue(QStringLiteral(":lat"), ev.latitude);
+    if (ev.lon.has_value())
+        q.bindValue(QStringLiteral(":lon"), ev.lon.value());
+    else
+        q.bindValue(QStringLiteral(":lon"), ev.longitude);
     q.bindValue(QStringLiteral(":address_normalised"), optVar(ev.addressNormalised));
     q.bindValue(QStringLiteral(":lga"),                optVar(ev.lga));
     q.bindValue(QStringLiteral(":suburb"),             strVar(ev.suburb));

@@ -81,8 +81,10 @@ int WeatherSource::parseResponse(const QByteArray& json)
 
         // Key on the truncated UTC hour
         const QDateTime key = QDateTime(dt.date(), QTime(dt.time().hour(), 0, 0), QTimeZone::utc());
+        const bool isNew = !m_cache.contains(key);
         m_cache.insert(key, wd);
-        ++cached;
+        if (isNew)
+            ++cached;
     }
 
     // Mark as successfully parsed (even if 0 records — API responded correctly)

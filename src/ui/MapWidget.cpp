@@ -34,6 +34,8 @@ MapWidget::MapWidget(QWidget* parent)
 void MapWidget::setEvents(const QVector<CrimeEvent>& events)
 {
     m_events = events;
+    if (m_events.isEmpty())
+        m_kdeHotspots.clear();
     for (CrimeEvent& ev : m_events) {
         if (ev.lat.has_value() && ev.lon.has_value()) {
             ev.latitude  = ev.lat.value();
@@ -246,7 +248,7 @@ void MapWidget::drawEvents(QPainter& p)
     p.setRenderHint(QPainter::Antialiasing, true);
 
     for (const CrimeEvent& ev : m_events) {
-        if (ev.latitude == 0.0 && ev.longitude == 0.0) continue;
+        if (!ev.lat.has_value() && !ev.lon.has_value()) continue;
 
         const QPointF pos = latLonToPixel(ev.latitude, ev.longitude);
 
@@ -482,7 +484,7 @@ void MapWidget::mouseMoveEvent(QMouseEvent* event)
     } else {
         // Tooltip: show event info on hover
         for (const CrimeEvent& ev : m_events) {
-            if (ev.latitude == 0.0 && ev.longitude == 0.0) continue;
+            if (!ev.lat.has_value() && !ev.lon.has_value()) continue;
             const QPointF pos = latLonToPixel(ev.latitude, ev.longitude);
             const QPointF diff = pos - QPointF(event->pos());
             if (std::sqrt(diff.x()*diff.x() + diff.y()*diff.y()) <= DOT_RADIUS + 2) {
