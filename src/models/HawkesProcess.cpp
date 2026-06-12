@@ -8,6 +8,15 @@
 
 static constexpr double PI_VAL = 3.14159265358979323846;
 
+void HawkesProcess::setHistory(const QVector<SpatiotemporalEvent>& h)
+{
+    m_history = h;
+    std::sort(m_history.begin(), m_history.end(),
+              [](const SpatiotemporalEvent& a, const SpatiotemporalEvent& b) {
+                  return a.tDays < b.tDays;
+              });
+}
+
 // ---------------------------------------------------------------------------
 // Triggering kernel
 // φ(Δt, Δx) = α · β · exp(−β·Δt) · σ²/(‖Δx‖²+σ²)

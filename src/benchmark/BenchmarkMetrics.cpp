@@ -59,7 +59,7 @@ double BenchmarkMetrics::pei(const QVector<double>& yTrue,
                               double areaFraction)
 {
     const int n = yTrue.size();
-    if (n == 0 || yPred.size() != n || areaFraction <= 0.0) return 0.0;
+    if (n == 0 || yPred.size() != n || areaFraction <= 0.0 || areaFraction > 1.0) return 0.0;
 
     const double totalCrimes = std::accumulate(yTrue.begin(), yTrue.end(), 0.0);
     if (totalCrimes == 0.0) return 0.0;

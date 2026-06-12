@@ -24,6 +24,7 @@ void RiskForecaster::fit(const QVector<CrimeEvent>& events, const QString& crime
 {
     m_crimeType = crimeType;
     m_recentCounts.clear();
+    m_fittedZones.clear();
 
     // Find the latest event date (use occurredAt when present — matches Poisson fit)
     QDate latest;
@@ -40,6 +41,7 @@ void RiskForecaster::fit(const QVector<CrimeEvent>& events, const QString& crime
         const QString zone = e.suburb.isEmpty() ? e.lga.value_or("unknown") : e.suburb;
         const QDateTime dt = e.occurredAt.value_or(e.timestamp);
         records.append({zone, dt, e.crimeType});
+        m_fittedZones.insert(zone);
 
         if (latest.isValid()) {
             const QDate evDate = dt.date();
@@ -167,9 +169,7 @@ ZoneForecast RiskForecaster::forecastZone(const QString& zoneId,
 QVector<ZoneForecast> RiskForecaster::forecast(const QDateTime& from) const
 {
     QVector<ZoneForecast> results;
-    const QStringList zones = m_recentCounts.keys();
-
-    for (const QString& zone : zones)
+    for (const QString& zone : m_fittedZones)
         results.append(forecastZone(zone, from));
 
     // Sort by weeklyRisk descending

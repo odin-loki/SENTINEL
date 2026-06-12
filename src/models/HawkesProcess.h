@@ -44,7 +44,7 @@ public:
     // Allow callers to directly set parameters (e.g. for unit testing the
     // kernel and intensity functions without running the optimizer).
     void setParams(const HawkesParams& p) { m_params = p; }
-    void setHistory(const QVector<SpatiotemporalEvent>& h) { m_history = h; }
+    void setHistory(const QVector<SpatiotemporalEvent>& h);
 
     // Triggering kernel (public for testability):
     // φ(Δt, Δx) = α · β · exp(−β·Δt) · σ²/(‖Δx‖²+σ²)

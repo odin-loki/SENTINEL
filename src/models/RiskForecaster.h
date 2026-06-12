@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 #include <QVector>
 #include <QMap>
+#include <QSet>
 #include <QString>
 #include <QDateTime>
 #include "core/CrimeEvent.h"
@@ -69,6 +70,9 @@ private:
 
     // zoneId → list of recent event dates (last 30 days)
     QMap<QString, QVector<QDate>> m_recentCounts;
+
+    // All zones seen during fit (includes stale zones outside recency window)
+    QSet<QString> m_fittedZones;
 
     // Alert thresholds
     double m_elevated = 0.3;

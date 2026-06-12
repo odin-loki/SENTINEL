@@ -256,7 +256,7 @@ double EnsemblePredictor::ece(const QVector<QPair<double, double>>& predActual,
     QVector<int>    cnt(bins,     0);
 
     for (const auto& [pred, act] : predActual) {
-        const int b = std::min(static_cast<int>(pred * bins), bins - 1);
+        const int b = std::clamp(static_cast<int>(pred * bins), 0, bins - 1);
         sumPred[b] += pred;
         sumAct[b]  += act;
         cnt[b]++;

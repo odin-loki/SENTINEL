@@ -2,7 +2,7 @@
 
 ## Overview
 
-SENTINEL has **369 test targets** achieving comprehensive coverage across every pipeline layer. Tests use the Qt Test framework and run via CTest.
+SENTINEL has **381 test targets** achieving comprehensive coverage across every pipeline layer. Tests use the Qt Test framework and run via CTest.
 
 ---
 
@@ -151,6 +151,25 @@ ctest -N
 - `test_network_stress` â€” 100 simultaneous async fetches
 - `test_pipeline_stress` â€” 5000-event pipeline throughput
 - `test_all_models_perf` â€” comparative model latency report
+
+---
+
+## Deep Audit Iteration 21 (12 new targets)
+
+| Target | Focus |
+|---|---|
+| `risk_forecaster_deep6` | Stale-zone forecast enumeration, horizon clamp, alert tiers |
+| `ensemble_predictor_deep6` | ECE bin clamping, calibration no-op, weight fallback |
+| `poisson_baseline_deep8` | Case-normalised buckets, NB gate, hour-23 bin |
+| `series_detector_deep6` | DBSCAN linkage, near-repeat params, cluster isolation |
+| `kde_hotspot_deep6` | Bandwidth guard, surface peaks, grid bounds |
+| `hawkes_process_deep8` | Sorted history, intensity cutoff, branching ratio |
+| `sentinel_logger_deep5` | Level filter, ring buffer, JSON fields |
+| `provenance_deep5` | Chain integrity, hash stability, export fields |
+| `benchmark_metrics_deep4` | PEI/PAI guards, SER, hint NDCG |
+| `test_settings_widget_deep4` | Auto-save wiring, theme toggle, validation |
+| `test_audit_log_deep4` | Filter narrowness, export, row selection |
+| `test_leads_widget_deep4` | Evidence key mapping, series tab refresh |
 
 ---
 

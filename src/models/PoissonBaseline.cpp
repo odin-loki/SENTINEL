@@ -19,7 +19,7 @@ QString PoissonBaseline::bucketKey(const QString& zone, int hourBin,
          + QString::number(hourBin) + QChar('|')
          + QString::number(dow)     + QChar('|')
          + QString::number(month)   + QChar('|')
-         + ctype;
+         + ctype.toLower();
 }
 
 // ---------------------------------------------------------------------------

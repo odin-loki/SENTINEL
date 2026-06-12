@@ -1463,3 +1463,64 @@ sentinel_test(weather_source_deep4 test_weather_source_deep4.cpp)
 set_tests_properties(weather_source_deep4 PROPERTIES TIMEOUT 30)
 sentinel_test(uk_police_source_deep4 test_uk_police_source_deep4.cpp)
 set_tests_properties(uk_police_source_deep4 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 21: SettingsWidget, AuditLogWidget, LeadsWidget ───────
+qt_add_executable(test_settings_widget_deep4
+    test_settings_widget_deep4.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
+)
+target_include_directories(test_settings_widget_deep4 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_settings_widget_deep4 PRIVATE
+    sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts)
+add_test(NAME test_settings_widget_deep4 COMMAND test_settings_widget_deep4 -platform offscreen)
+set_tests_properties(test_settings_widget_deep4 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "SENTINEL_HEADLESS_TEST=1;PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+qt_add_executable(test_audit_log_deep4
+    test_audit_log_deep4.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AuditLogWidget.cpp
+)
+target_include_directories(test_audit_log_deep4 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_audit_log_deep4 PRIVATE
+    sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts)
+add_test(NAME test_audit_log_deep4 COMMAND test_audit_log_deep4 -platform offscreen)
+set_tests_properties(test_audit_log_deep4 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+qt_add_executable(test_leads_widget_deep4
+    test_leads_widget_deep4.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+)
+target_include_directories(test_leads_widget_deep4 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_leads_widget_deep4 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_leads_widget_deep4 COMMAND test_leads_widget_deep4 -platform offscreen)
+set_tests_properties(test_leads_widget_deep4 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+# ── Deep audit iteration 21: RiskForecaster, EnsemblePredictor, PoissonBaseline ─
+sentinel_test(risk_forecaster_deep6 test_risk_forecaster_deep6.cpp)
+set_tests_properties(risk_forecaster_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(ensemble_predictor_deep6 test_ensemble_predictor_deep6.cpp)
+set_tests_properties(ensemble_predictor_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(poisson_baseline_deep8 test_poisson_baseline_deep8.cpp)
+set_tests_properties(poisson_baseline_deep8 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 21: SeriesDetector, KDEHotspot, HawkesProcess ────────
+sentinel_test(series_detector_deep6 test_series_detector_deep6.cpp)
+set_tests_properties(series_detector_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(kde_hotspot_deep6 test_kde_hotspot_deep6.cpp)
+set_tests_properties(kde_hotspot_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(hawkes_process_deep8 test_hawkes_process_deep8.cpp)
+set_tests_properties(hawkes_process_deep8 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 21: SentinelLogger, ProvenanceLog, BenchmarkMetrics ─
+sentinel_test(sentinel_logger_deep5 test_sentinel_logger_deep5.cpp)
+set_tests_properties(sentinel_logger_deep5 PROPERTIES TIMEOUT 30)
+sentinel_test(provenance_deep5 test_provenance_deep5.cpp)
+set_tests_properties(provenance_deep5 PROPERTIES TIMEOUT 30)
+sentinel_test(benchmark_metrics_deep4 test_benchmark_metrics_deep4.cpp)
+set_tests_properties(benchmark_metrics_deep4 PROPERTIES TIMEOUT 30)
