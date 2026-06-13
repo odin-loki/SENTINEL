@@ -1524,3 +1524,65 @@ sentinel_test(provenance_deep5 test_provenance_deep5.cpp)
 set_tests_properties(provenance_deep5 PROPERTIES TIMEOUT 30)
 sentinel_test(benchmark_metrics_deep4 test_benchmark_metrics_deep4.cpp)
 set_tests_properties(benchmark_metrics_deep4 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 22: GPRegression, AnomalyDetector, EvidenceScorer ───
+sentinel_test(gp_regression_deep7 test_gp_regression_deep7.cpp)
+set_tests_properties(gp_regression_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(anomaly_detector_deep7 test_anomaly_detector_deep7.cpp)
+set_tests_properties(anomaly_detector_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(evidence_scorer_deep8 test_evidence_scorer_deep8.cpp)
+set_tests_properties(evidence_scorer_deep8 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 22: GeographicProfiler, HintEngine, NearRepeat ───────
+sentinel_test(geographic_profiler_deep7 test_geographic_profiler_deep7.cpp)
+set_tests_properties(geographic_profiler_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(hint_engine_deep7 test_hint_engine_deep7.cpp)
+set_tests_properties(hint_engine_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(near_repeat_deep7 test_near_repeat_deep7.cpp)
+set_tests_properties(near_repeat_deep7 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 22: DataExporter, CalibrationAnalyser, TemporalFeatures ─
+sentinel_test(data_exporter_deep6 test_data_exporter_deep6.cpp)
+set_tests_properties(data_exporter_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(calibration_analyser_deep5 test_calibration_analyser_deep5.cpp)
+set_tests_properties(calibration_analyser_deep5 PROPERTIES TIMEOUT 30)
+sentinel_test(temporal_features_deep5 test_temporal_features_deep5.cpp)
+set_tests_properties(temporal_features_deep5 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 22: CrimeClassifier, MainWindow, DebugConsole ────────
+sentinel_test(crime_classifier_deep5 test_crime_classifier_deep5.cpp)
+set_tests_properties(crime_classifier_deep5 PROPERTIES TIMEOUT 30)
+
+qt_add_executable(test_main_window_deep5
+    test_main_window_deep5.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MainWindow.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AuditLogWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
+)
+target_include_directories(test_main_window_deep5 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_main_window_deep5 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_main_window_deep5 COMMAND test_main_window_deep5 -platform offscreen)
+set_tests_properties(test_main_window_deep5 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+
+qt_add_executable(test_debug_console_deep3
+    test_debug_console_deep3.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+)
+target_include_directories(test_debug_console_deep3 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_debug_console_deep3 PRIVATE
+    sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
+add_test(NAME test_debug_console_deep3 COMMAND test_debug_console_deep3 -platform offscreen)
+set_tests_properties(test_debug_console_deep3 PROPERTIES
+    TIMEOUT 120 LABELS "ui"
+    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")

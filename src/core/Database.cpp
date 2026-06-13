@@ -335,10 +335,14 @@ bool Database::insertEvent(const CrimeEvent& ev)
     q.bindValue(QStringLiteral(":location_raw"),       optVar(ev.locationRaw));
     if (ev.lat.has_value())
         q.bindValue(QStringLiteral(":lat"), ev.lat.value());
+    else if (ev.latitude != 0.0)
+        q.bindValue(QStringLiteral(":lat"), ev.latitude);
     else
         q.bindValue(QStringLiteral(":lat"), QVariant{});
     if (ev.lon.has_value())
         q.bindValue(QStringLiteral(":lon"), ev.lon.value());
+    else if (ev.longitude != 0.0)
+        q.bindValue(QStringLiteral(":lon"), ev.longitude);
     else
         q.bindValue(QStringLiteral(":lon"), QVariant{});
     q.bindValue(QStringLiteral(":address_normalised"), optVar(ev.addressNormalised));

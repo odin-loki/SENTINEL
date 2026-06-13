@@ -367,10 +367,7 @@ void TestAnomalyDetectorDeep::testContaminationRateRespected()
     QVERIFY(minOutlierScore > maxNormalScore * 0.5);
 }
 
-// ── 12: Contamination value does not alter detection output ───────────────
-//
-// m_contamination is stored but not used in the detection threshold, so two
-// detectors trained identically on the same data should flag the same events.
+// ── 12: Higher contamination lowers threshold → more anomalies flagged ─────
 
 void TestAnomalyDetectorDeep::testLowContaminationFewerAnomalies()
 {
@@ -381,6 +378,9 @@ void TestAnomalyDetectorDeep::testLowContaminationFewerAnomalies()
                                 -0.1 + i * 0.01,
                                 static_cast<double>(i), 0.5));
     }
+    // Inject a clear spatial outlier
+    data.append(makeFeature(QStringLiteral("OUTLIER"),
+                            55.0, 2.0, 25.0, 0.5));
 
     AnomalyDetector detLow(0.01);
     detLow.fit(data);
@@ -393,11 +393,18 @@ void TestAnomalyDetectorDeep::testLowContaminationFewerAnomalies()
     QCOMPARE(resultsLow.size(),  data.size());
     QCOMPARE(resultsHigh.size(), data.size());
 
-    // Same training data → same combined scores regardless of contamination setting.
+    for (int i = 0; i < resultsLow.size(); ++i)
+        QCOMPARE(resultsLow[i].combinedScore, resultsHigh[i].combinedScore);
+
+    int flaggedLow = 0;
+    int flaggedHigh = 0;
     for (int i = 0; i < resultsLow.size(); ++i) {
-        QCOMPARE(resultsLow[i].combinedScore,  resultsHigh[i].combinedScore);
-        QCOMPARE(resultsLow[i].isAnomaly,      resultsHigh[i].isAnomaly);
+        if (resultsLow[i].isAnomaly)  ++flaggedLow;
+        if (resultsHigh[i].isAnomaly) ++flaggedHigh;
     }
+    QVERIFY2(flaggedHigh >= flaggedLow,
+             qPrintable(QStringLiteral("High contamination should flag >= anomalies: low=%1 high=%2")
+                            .arg(flaggedLow).arg(flaggedHigh)));
 }
 
 // ── 13: AnomalySignal carries all required numeric fields ─────────────────

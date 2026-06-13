@@ -178,5 +178,6 @@ QPair<double,double> GPRegression::predictWithUncertainty(double x1, double x2) 
 
 double GPRegression::logMarginalLikelihood() const
 {
+    if (!m_fitted) return 0.0;
     return m_logML;
 }

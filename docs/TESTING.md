@@ -2,7 +2,7 @@
 
 ## Overview
 
-SENTINEL has **381 test targets** achieving comprehensive coverage across every pipeline layer. Tests use the Qt Test framework and run via CTest.
+SENTINEL has **393 test targets** achieving comprehensive coverage across every pipeline layer. Tests use the Qt Test framework and run via CTest.
 
 ---
 
@@ -151,6 +151,25 @@ ctest -N
 - `test_network_stress` â€” 100 simultaneous async fetches
 - `test_pipeline_stress` â€” 5000-event pipeline throughput
 - `test_all_models_perf` â€” comparative model latency report
+
+---
+
+## Deep Audit Iteration 22 (12 new targets)
+
+| Target | Focus |
+|---|---|
+| `gp_regression_deep7` | Log-ML unfitted guard, kernel clamp, variance non-negative |
+| `anomaly_detector_deep7` | Contamination threshold, isolation/LOF, auto-fit |
+| `evidence_scorer_deep8` | Prior edges, LR overflow guard, bayesFactor |
+| `geographic_profiler_deep7` | Rossmo buffer, search areas, grid normalisation |
+| `hint_engine_deep7` | Geo cap, series filter, rankScore rerank |
+| `near_repeat_deep7` | Knox ratio, decay windows, bandwidth guards |
+| `data_exporter_deep6` | HTML escape, JSON/CSV roundtrip, forecast labels |
+| `calibration_analyser_deep5` | ECE bins, isotonic PAVA, log-loss extremes |
+| `temporal_features_deep5` | Cyclical encoding, lunar phase, sun altitude |
+| `crime_classifier_deep5` | Severity ranking, threat/sentiment, multilabel |
+| `test_main_window_deep5` | Headless shell, menus, status bar |
+| `test_debug_console_deep3` | Level filter, trim, search, timestamps |
 
 ---
 

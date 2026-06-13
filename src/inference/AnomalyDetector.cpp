@@ -6,7 +6,8 @@
 #include <limits>
 
 AnomalyDetector::AnomalyDetector(double contamination)
-    : m_contamination(contamination)
+    : m_contamination(std::clamp(contamination, 0.01, 0.49))
+    , m_anomalyThreshold(std::clamp(1.0 - m_contamination * 7.0, 0.4, 0.85))
 {}
 
 static double safeSqrt(double x) { return x > 0.0 ? std::sqrt(x) : 0.0; }
