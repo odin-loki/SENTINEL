@@ -124,7 +124,7 @@ void GPRegression::fit(const QVector<QPair<double,double>>& X, const QVector<dou
     for (int i = 0; i < n; ++i)
         logDetTerm += std::log(std::abs(m_L[i][i]) + 1e-300);
 
-    constexpr double log2pi = std::numbers::ln2_v<double> + std::log(std::numbers::pi_v<double>);
+    const double log2pi = std::numbers::ln2_v<double> + std::log(std::numbers::pi_v<double>);
     m_logML = -0.5 * yTalpha - logDetTerm - 0.5 * n * log2pi;
 
     m_fitted = true;

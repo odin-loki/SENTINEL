@@ -41,11 +41,14 @@ private slots:
         QVector<SeriesEvent> events;
         events.append(sev(QStringLiteral("B1"), 51.5, -0.1, 0.0, QStringLiteral("burglary")));
         events.append(sev(QStringLiteral("B2"), 51.5001, -0.1, 1.0, QStringLiteral("burglary")));
-        events.append(sev(QStringLiteral("R1"), 51.5002, -0.1, 2.0, QStringLiteral("robbery")));
+        events.append(sev(QStringLiteral("B3"), 51.5002, -0.1, 2.0, QStringLiteral("burglary")));
+        events.append(sev(QStringLiteral("B4"), 51.5003, -0.1, 3.0, QStringLiteral("burglary")));
+        events.append(sev(QStringLiteral("R1"), 51.5004, -0.1, 4.0, QStringLiteral("robbery")));
 
         const auto series = sd.detectSeries(events);
         QCOMPARE(series.size(), 1);
         QCOMPARE(series[0].dominantCrimeType, QStringLiteral("burglary"));
+        QCOMPARE(series[0].members.size(), 4);
     }
 
     void testUnknownCrimeTypeUsesDefaultNearRepeatParams()

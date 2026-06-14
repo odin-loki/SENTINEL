@@ -21,6 +21,8 @@ QMap<QString, double> DataQualityScorer::defaultReliabilityMap()
         { QStringLiteral("lapd"),          0.80 },   // LAPD open data portal
         { QStringLiteral("abs_australia"), 0.80 },   // Australian Bureau of Statistics
         { QStringLiteral("test"),          0.50 },   // Test / synthetic data
+        { QStringLiteral("cincinnati"),    0.75 },
+        { QStringLiteral("sfpd"),          0.80 },
         { QStringLiteral("manual"),        0.40 },   // Manual entry
     };
 }

@@ -15,6 +15,7 @@
 
 Database::Database(const AppConfig& cfg)
     : m_path(cfg.databasePath)
+    , m_qualityThreshold(cfg.qualityThreshold)
 {
     // Each instance gets a unique connection name so Qt SQL pool entries
     // from deleted Database objects never contaminate new ones.
@@ -411,7 +412,8 @@ QVector<CrimeEvent> Database::queryEvents(const QString& crimeType,
                                            const QDateTime& to,
                                            double latMin, double latMax,
                                            double lonMin, double lonMax,
-                                           int limit) const
+                                           int limit,
+                                           double minQuality) const
 {
     QString sql = QStringLiteral("SELECT * FROM events WHERE 1=1");
     QVector<std::pair<QString,QVariant>> bindings;
@@ -442,6 +444,10 @@ QVector<CrimeEvent> Database::queryEvents(const QString& crimeType,
         sql += QStringLiteral(" AND lon >= :lon_min AND lon <= :lon_max");
         bindings.append({QStringLiteral(":lon_min"), lonMin});
         bindings.append({QStringLiteral(":lon_max"), lonMax});
+    }
+    if (minQuality >= 0.0) {
+        sql += QStringLiteral(" AND quality_score >= :min_quality");
+        bindings.append({QStringLiteral(":min_quality"), minQuality});
     }
 
     sql += QStringLiteral(" ORDER BY occurred_at DESC LIMIT :limit");

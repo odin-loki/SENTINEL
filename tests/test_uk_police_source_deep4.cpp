@@ -14,16 +14,7 @@
 #include <cmath>
 
 #include "core/CrimeEvent.h"
-#ifdef __GNUC__
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wkeyword-macro"
-#endif
-#define private public
 #include "ingest/UKPoliceSource.h"
-#undef private
-#ifdef __GNUC__
-#  pragma GCC diagnostic pop
-#endif
 
 class FakeNetworkReply : public QNetworkReply
 {
@@ -190,11 +181,11 @@ private slots:
         QVERIFY(ev.crimeType.isEmpty());
     }
 
-    void testQualityScoreAlwaysHalf()
+    void testParseDoesNotHardcodeQualityScore()
     {
         UKPoliceSource src(51.5, -0.1);
         const CrimeEvent ev = src.parseRecord(makeRecord(QStringLiteral("robbery")));
-        QCOMPARE(ev.qualityScore, 0.5);
+        QCOMPARE(ev.qualityScore, CrimeEvent{}.qualityScore);
     }
 
     void testNonObjectArrayElementsSkipped()

@@ -1,5 +1,8 @@
 #include "ui/SettingsWidget.h"
+#include "core/UpdateChecker.h"
 
+#include <QApplication>
+#include <QDesktopServices>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFormLayout>
@@ -11,8 +14,12 @@
 #include <QSizePolicy>
 #include <QComboBox>
 #include <QDir>
+#include <QPointer>
 #include <QProcessEnvironment>
 #include <QSignalBlocker>
+#include <QThread>
+#include <QTimer>
+#include <QUrl>
 
 namespace {
 
@@ -37,6 +44,9 @@ SettingsWidget::SettingsWidget(AppConfig& cfg, QWidget* parent)
     , m_seriesMinEventsSpin(nullptr)
     , m_seriesEpsKmSpin(nullptr)
     , m_seriesEpsDaysSpin(nullptr)
+    , m_seriesEpsBurglarySpin(nullptr)
+    , m_seriesEpsTheftSpin(nullptr)
+    , m_seriesEpsViolentSpin(nullptr)
     , m_qualityThresholdSpin(nullptr)
     , m_forecastHorizonSpin(nullptr)
     , m_alertElevatedSpin(nullptr)
@@ -49,6 +59,8 @@ SettingsWidget::SettingsWidget(AppConfig& cfg, QWidget* parent)
     , m_ensembleHawkesSpin(nullptr)
     , m_autoRefreshCheck(nullptr)
     , m_refreshIntervalSpin(nullptr)
+    , m_enableLocalApiCheck(nullptr)
+    , m_localApiPortSpin(nullptr)
     , m_databasePathEdit(nullptr)
     , m_browseDbBtn(nullptr)
     , m_themeCombo(nullptr)
@@ -59,6 +71,7 @@ SettingsWidget::SettingsWidget(AppConfig& cfg, QWidget* parent)
     , m_saveBtn(nullptr)
     , m_resetBtn(nullptr)
     , m_resetDefaultsBtn(nullptr)
+    , m_checkUpdatesBtn(nullptr)
 {
     setupUI();
     loadFromConfig();
@@ -233,6 +246,21 @@ void SettingsWidget::setupUI()
         m_seriesEpsDaysSpin->setSuffix(" days");
         m_seriesEpsDaysSpin->setToolTip("DBSCAN temporal epsilon for series detection");
 
+        auto makeSeriesEpsOverride = [&](QWidget* parent) {
+            auto* s = new QDoubleSpinBox(parent);
+            s->setRange(0.0, 50.0);
+            s->setDecimals(2);
+            s->setSingleStep(0.1);
+            s->setSuffix(" km");
+            s->setSpecialValueText(QStringLiteral("default"));
+            s->setToolTip("Per-crime-type DBSCAN spatial epsilon; 0 uses Series Spatial Eps");
+            return s;
+        };
+
+        m_seriesEpsBurglarySpin = makeSeriesEpsOverride(box);
+        m_seriesEpsTheftSpin    = makeSeriesEpsOverride(box);
+        m_seriesEpsViolentSpin  = makeSeriesEpsOverride(box);
+
         m_qualityThresholdSpin = new QDoubleSpinBox(box);
         m_qualityThresholdSpin->setRange(0.0, 1.0);
         m_qualityThresholdSpin->setDecimals(2);
@@ -248,6 +276,9 @@ void SettingsWidget::setupUI()
         form->addRow("Series Min Events:",      m_seriesMinEventsSpin);
         form->addRow("Series Spatial Eps:",     m_seriesEpsKmSpin);
         form->addRow("Series Temporal Eps:",    m_seriesEpsDaysSpin);
+        form->addRow("Burglary Series Eps:",    m_seriesEpsBurglarySpin);
+        form->addRow("Theft Series Eps:",       m_seriesEpsTheftSpin);
+        form->addRow("Violent Series Eps:",     m_seriesEpsViolentSpin);
         form->addRow("Quality Threshold:",      m_qualityThresholdSpin);
         form->addRow("Forecast Horizon:",       m_forecastHorizonSpin);
         scrollLayout->addWidget(box);
@@ -382,6 +413,34 @@ void SettingsWidget::setupUI()
         scrollLayout->addWidget(box);
     }
 
+    // ── Local API ────────────────────────────────────────────────────────────
+    {
+        auto* box    = makeGroup("LOCAL API");
+        auto* layout = new QVBoxLayout(box);
+        layout->setSpacing(10);
+
+        m_enableLocalApiCheck = new QCheckBox("Enable localhost read-only REST API", box);
+        m_enableLocalApiCheck->setToolTip(
+            "Exposes GET /api/v1/events, /api/v1/leads, and /api/v1/health on 127.0.0.1 only.");
+
+        auto* portRow = new QHBoxLayout();
+        auto* portLbl = new QLabel("Port:", box);
+        m_localApiPortSpin = new QSpinBox(box);
+        m_localApiPortSpin->setRange(1024, 65535);
+        m_localApiPortSpin->setFixedWidth(120);
+        portRow->addWidget(portLbl);
+        portRow->addWidget(m_localApiPortSpin);
+        portRow->addStretch();
+
+        layout->addWidget(m_enableLocalApiCheck);
+        layout->addLayout(portRow);
+
+        connect(m_enableLocalApiCheck, &QCheckBox::toggled,
+                m_localApiPortSpin, &QSpinBox::setEnabled);
+
+        scrollLayout->addWidget(box);
+    }
+
     // ── Database ─────────────────────────────────────────────────────────────
     {
         auto* box    = makeGroup("DATABASE");
@@ -451,6 +510,35 @@ void SettingsWidget::setupUI()
         scrollLayout->addWidget(box);
     }
 
+    // ── About & Updates ──────────────────────────────────────────────────────
+    {
+        auto* box    = makeGroup("ABOUT & UPDATES");
+        auto* layout = new QVBoxLayout(box);
+        layout->setSpacing(10);
+
+        auto* versionLbl = new QLabel(
+            QStringLiteral("Current version: v%1")
+                .arg(QApplication::applicationVersion()),
+            box);
+        versionLbl->setStyleSheet("color: #a0a8b8; font-size: 13px;");
+
+        m_checkUpdatesBtn = new QPushButton(QStringLiteral("Check for Updates"), box);
+        m_checkUpdatesBtn->setObjectName(QStringLiteral("checkForUpdatesBtn"));
+        m_checkUpdatesBtn->setFixedWidth(180);
+
+        layout->addWidget(versionLbl);
+        layout->addWidget(m_checkUpdatesBtn, 0, Qt::AlignLeft);
+
+        auto* hint = new QLabel(
+            "Checks GitHub Releases for a newer SENTINEL build.",
+            box);
+        hint->setStyleSheet("color: #4a5568; font-size: 11px;");
+        hint->setWordWrap(true);
+        layout->addWidget(hint);
+
+        scrollLayout->addWidget(box);
+    }
+
     scrollLayout->addStretch();
     scrollArea->setWidget(scrollWidget);
     outerLayout->addWidget(scrollArea, 1);
@@ -487,6 +575,7 @@ void SettingsWidget::setupUI()
     connect(m_resetDefaultsBtn,&QPushButton::clicked, this, &SettingsWidget::onResetToDefaults);
     connect(m_browseDbBtn,     &QPushButton::clicked, this, &SettingsWidget::onBrowseDatabase);
     connect(m_browseExportBtn, &QPushButton::clicked, this, &SettingsWidget::onBrowseExport);
+    connect(m_checkUpdatesBtn, &QPushButton::clicked, this, &SettingsWidget::onCheckForUpdates);
 
     // Auto-save connections — save silently on every change
     connect(m_themeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -505,6 +594,17 @@ void SettingsWidget::setupUI()
     connect(m_autoRefreshCheck, &QCheckBox::toggled, this, &SettingsWidget::onAutoSave);
     connect(m_refreshIntervalSpin, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &SettingsWidget::onAutoSave);
+    connect(m_enableLocalApiCheck, &QCheckBox::toggled, this, &SettingsWidget::onAutoSave);
+    connect(m_localApiPortSpin, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &SettingsWidget::onAutoSave);
+    connect(m_openWeatherKeyEdit, &QLineEdit::editingFinished, this, &SettingsWidget::onAutoSave);
+    connect(m_socrataTokenEdit, &QLineEdit::editingFinished, this, &SettingsWidget::onAutoSave);
+    connect(m_defaultLatSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            this, &SettingsWidget::onAutoSave);
+    connect(m_defaultLonSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            this, &SettingsWidget::onAutoSave);
+    connect(m_defaultRadiusSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            this, &SettingsWidget::onAutoSave);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -520,6 +620,8 @@ void SettingsWidget::loadFromConfig()
     const QSignalBlocker blockAlertCritical(m_alertCriticalSpin);
     const QSignalBlocker blockAutoRefresh(m_autoRefreshCheck);
     const QSignalBlocker blockRefreshInterval(m_refreshIntervalSpin);
+    const QSignalBlocker blockLocalApi(m_enableLocalApiCheck);
+    const QSignalBlocker blockLocalApiPort(m_localApiPortSpin);
 
     m_openWeatherKeyEdit->setText(m_cfg.openWeatherKey);
     m_socrataTokenEdit->setText(m_cfg.socrataToken);
@@ -532,6 +634,9 @@ void SettingsWidget::loadFromConfig()
     m_seriesMinEventsSpin->setValue(m_cfg.seriesMinEvents);
     m_seriesEpsKmSpin->setValue(m_cfg.seriesEpsKm);
     m_seriesEpsDaysSpin->setValue(m_cfg.seriesEpsDays);
+    m_seriesEpsBurglarySpin->setValue(m_cfg.seriesEpsByCrimeType.value(QStringLiteral("burglary"), 0.0));
+    m_seriesEpsTheftSpin->setValue(m_cfg.seriesEpsByCrimeType.value(QStringLiteral("theft"), 0.0));
+    m_seriesEpsViolentSpin->setValue(m_cfg.seriesEpsByCrimeType.value(QStringLiteral("violent"), 0.0));
     m_qualityThresholdSpin->setValue(m_cfg.qualityThreshold);
     m_forecastHorizonSpin->setValue(m_cfg.forecastHorizonDays);
 
@@ -549,6 +654,10 @@ void SettingsWidget::loadFromConfig()
     m_autoRefreshCheck->setChecked(m_cfg.autoRefreshEnabled);
     m_refreshIntervalSpin->setValue(m_cfg.refreshIntervalSeconds);
     m_refreshIntervalSpin->setEnabled(m_cfg.autoRefreshEnabled);
+
+    m_enableLocalApiCheck->setChecked(m_cfg.enableLocalApi);
+    m_localApiPortSpin->setValue(m_cfg.localApiPort);
+    m_localApiPortSpin->setEnabled(m_cfg.enableLocalApi);
 
     m_databasePathEdit->setText(m_cfg.databasePath);
 
@@ -574,6 +683,13 @@ void SettingsWidget::applyToConfig()
     m_cfg.seriesMinEvents     = m_seriesMinEventsSpin->value();
     m_cfg.seriesEpsKm         = m_seriesEpsKmSpin->value();
     m_cfg.seriesEpsDays       = m_seriesEpsDaysSpin->value();
+    m_cfg.seriesEpsByCrimeType.clear();
+    if (m_seriesEpsBurglarySpin->value() > 0.0)
+        m_cfg.seriesEpsByCrimeType.insert(QStringLiteral("burglary"), m_seriesEpsBurglarySpin->value());
+    if (m_seriesEpsTheftSpin->value() > 0.0)
+        m_cfg.seriesEpsByCrimeType.insert(QStringLiteral("theft"), m_seriesEpsTheftSpin->value());
+    if (m_seriesEpsViolentSpin->value() > 0.0)
+        m_cfg.seriesEpsByCrimeType.insert(QStringLiteral("violent"), m_seriesEpsViolentSpin->value());
     m_cfg.qualityThreshold    = m_qualityThresholdSpin->value();
     m_cfg.forecastHorizonDays = m_forecastHorizonSpin->value();
 
@@ -590,6 +706,9 @@ void SettingsWidget::applyToConfig()
 
     m_cfg.autoRefreshEnabled     = m_autoRefreshCheck->isChecked();
     m_cfg.refreshIntervalSeconds = m_refreshIntervalSpin->value();
+
+    m_cfg.enableLocalApi = m_enableLocalApiCheck->isChecked();
+    m_cfg.localApiPort   = m_localApiPortSpin->value();
 
     m_cfg.databasePath = m_databasePathEdit->text().trimmed();
 
@@ -682,6 +801,59 @@ void SettingsWidget::onBrowseExport()
         m_exportDirEdit->setText(dir);
         onAutoSave();
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+void SettingsWidget::onCheckForUpdates()
+{
+    if (m_checkingUpdates)
+        return;
+
+    m_checkingUpdates = true;
+    m_checkUpdatesBtn->setEnabled(false);
+    m_checkUpdatesBtn->setText(QStringLiteral("Checking…"));
+
+    const QString version = QApplication::applicationVersion();
+    QPointer<SettingsWidget> self(this);
+
+    QThread* thread = QThread::create([self, version]() {
+        const auto result = UpdateChecker::checkForUpdate(version);
+        if (!self)
+            return;
+
+        QTimer::singleShot(0, self, [self, result, version]() {
+            if (!self)
+                return;
+
+            self->m_checkingUpdates = false;
+            self->m_checkUpdatesBtn->setEnabled(true);
+            self->m_checkUpdatesBtn->setText(QStringLiteral("Check for Updates"));
+
+            if (headlessTestMode())
+                return;
+
+            if (result.has_value()) {
+                const auto reply = QMessageBox::information(
+                    self,
+                    QStringLiteral("Update Available"),
+                    QStringLiteral("A newer version of SENTINEL is available.\n\n"
+                                   "Open the release page to download?"),
+                    QMessageBox::Yes | QMessageBox::No);
+                if (reply == QMessageBox::Yes)
+                    QDesktopServices::openUrl(QUrl(*result));
+            } else {
+                QMessageBox::information(
+                    self,
+                    QStringLiteral("No Updates"),
+                    QStringLiteral("SENTINEL %1 is up to date, or the update server "
+                                   "could not be reached.")
+                        .arg(version));
+            }
+        });
+    });
+
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

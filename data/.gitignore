@@ -1,0 +1,4 @@
+# Full bulk downloads (test samples live in crimes/ and co_offending/)
+bulk/
+co_offending/_tmp_*
+crimes/_tmp_*

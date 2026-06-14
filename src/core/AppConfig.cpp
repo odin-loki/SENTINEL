@@ -17,7 +17,55 @@ bool clampValue(T& value, T lo, T hi)
     return false;
 }
 
+QString seriesCrimeBucket(const QString& crimeType)
+{
+    const QString key = crimeType.toLower().replace(QLatin1Char(' '), QLatin1Char('_'));
+    if (key.contains(QStringLiteral("burgl")))
+        return QStringLiteral("burglary");
+    if (key.contains(QStringLiteral("theft")) || key.contains(QStringLiteral("larcen"))
+        || key.contains(QStringLiteral("shoplift")))
+        return QStringLiteral("theft");
+    if (key.contains(QStringLiteral("assault")) || key.contains(QStringLiteral("violent"))
+        || key.contains(QStringLiteral("robbery")) || key.contains(QStringLiteral("homicide"))
+        || key.contains(QStringLiteral("weapon")))
+        return QStringLiteral("violent");
+    return QStringLiteral("other");
+}
+
 } // namespace
+
+void AppConfig::loadSeriesEpsOverrides(QSettings& settings, AppConfig& c)
+{
+    c.seriesEpsByCrimeType.clear();
+    const auto loadKey = [&](const QString& bucket, const char* key) {
+        const double v = settings.value(key, 0.0).toDouble();
+        if (v > 0.0)
+            c.seriesEpsByCrimeType.insert(bucket, v);
+    };
+    loadKey(QStringLiteral("burglary"), "model/series_eps_burglary_km");
+    loadKey(QStringLiteral("theft"),    "model/series_eps_theft_km");
+    loadKey(QStringLiteral("violent"),  "model/series_eps_violent_km");
+}
+
+void AppConfig::saveSeriesEpsOverrides(QSettings& settings, const AppConfig& c)
+{
+    const auto saveKey = [&](const QString& bucket, const char* key) {
+        const double v = c.seriesEpsByCrimeType.value(bucket, 0.0);
+        settings.setValue(key, v > 0.0 ? v : 0.0);
+    };
+    saveKey(QStringLiteral("burglary"), "model/series_eps_burglary_km");
+    saveKey(QStringLiteral("theft"),    "model/series_eps_theft_km");
+    saveKey(QStringLiteral("violent"),  "model/series_eps_violent_km");
+}
+
+double AppConfig::effectiveSeriesEpsKm(const QString& crimeType) const
+{
+    const QString bucket = seriesCrimeBucket(crimeType);
+    const auto it = seriesEpsByCrimeType.constFind(bucket);
+    if (it != seriesEpsByCrimeType.constEnd() && it.value() > 0.0)
+        return it.value();
+    return seriesEpsKm;
+}
 
 // ── JSON serialisation ────────────────────────────────────────────────────────
 
@@ -34,6 +82,13 @@ QJsonObject AppConfig::toJson() const
     obj["series_min_events"]         = seriesMinEvents;
     obj["series_eps_km"]             = seriesEpsKm;
     obj["series_eps_days"]           = seriesEpsDays;
+    {
+        QJsonObject epsObj;
+        for (auto it = seriesEpsByCrimeType.constBegin();
+             it != seriesEpsByCrimeType.constEnd(); ++it)
+            epsObj[it.key()] = it.value();
+        obj["series_eps_by_crime_type"] = epsObj;
+    }
     obj["quality_threshold"]         = qualityThreshold;
     obj["auto_refresh_enabled"]      = autoRefreshEnabled;
     obj["refresh_interval_seconds"]  = refreshIntervalSeconds;
@@ -55,6 +110,8 @@ QJsonObject AppConfig::toJson() const
     obj["max_lead_count"]            = maxLeadCount;
     obj["poisson_grid_size"]         = poissonGridSize;
     obj["kde_grid_size"]             = kdeGridSize;
+    obj["enable_local_api"]          = enableLocalApi;
+    obj["local_api_port"]            = localApiPort;
     return obj;
 }
 
@@ -72,6 +129,15 @@ AppConfig AppConfig::fromJson(const QJsonObject& obj)
     if (obj.contains("series_min_events"))          c.seriesMinEvents        = obj["series_min_events"].toInt();
     if (obj.contains("series_eps_km"))              c.seriesEpsKm            = obj["series_eps_km"].toDouble();
     if (obj.contains("series_eps_days"))            c.seriesEpsDays          = obj["series_eps_days"].toDouble();
+    if (obj.contains("series_eps_by_crime_type") && obj["series_eps_by_crime_type"].isObject()) {
+        c.seriesEpsByCrimeType.clear();
+        const QJsonObject epsObj = obj["series_eps_by_crime_type"].toObject();
+        for (auto it = epsObj.constBegin(); it != epsObj.constEnd(); ++it) {
+            const double v = it.value().toDouble();
+            if (v > 0.0)
+                c.seriesEpsByCrimeType.insert(it.key(), v);
+        }
+    }
     if (obj.contains("quality_threshold"))          c.qualityThreshold       = obj["quality_threshold"].toDouble();
     if (obj.contains("auto_refresh_enabled"))       c.autoRefreshEnabled     = obj["auto_refresh_enabled"].toBool();
     if (obj.contains("refresh_interval_seconds"))   c.refreshIntervalSeconds = obj["refresh_interval_seconds"].toInt();
@@ -93,6 +159,8 @@ AppConfig AppConfig::fromJson(const QJsonObject& obj)
     if (obj.contains("max_lead_count"))             c.maxLeadCount           = obj["max_lead_count"].toInt();
     if (obj.contains("poisson_grid_size"))          c.poissonGridSize        = obj["poisson_grid_size"].toInt();
     if (obj.contains("kde_grid_size"))              c.kdeGridSize            = obj["kde_grid_size"].toInt();
+    if (obj.contains("enable_local_api"))         c.enableLocalApi         = obj["enable_local_api"].toBool();
+    if (obj.contains("local_api_port"))           c.localApiPort           = obj["local_api_port"].toInt();
 
     return c;
 }
@@ -140,6 +208,18 @@ bool AppConfig::validate()
         seriesEpsDays = 14.0;
         ok = false;
     }
+    for (auto it = seriesEpsByCrimeType.begin(); it != seriesEpsByCrimeType.end(); ) {
+        if (it.value() <= 0.0) {
+            it = seriesEpsByCrimeType.erase(it);
+            ok = false;
+        } else if (it.value() > 50.0) {
+            it.value() = 50.0;
+            ok = false;
+            ++it;
+        } else {
+            ++it;
+        }
+    }
     ok &= clampValue(qualityThreshold, 0.0, 1.0);
     ok &= clampValue(alertElevated, 0.0, 1.0);
     ok &= clampValue(alertHigh, 0.0, 1.0);
@@ -167,6 +247,7 @@ bool AppConfig::validate()
     ok &= clampValue(maxLeadCount, 1, 10000);
     ok &= clampValue(poissonGridSize, 10, 500);
     ok &= clampValue(kdeGridSize, 10, 500);
+    ok &= clampValue(localApiPort, 1024, 65535);
 
     if (databasePath.trimmed().isEmpty()) {
         databasePath = QStringLiteral(":memory:");

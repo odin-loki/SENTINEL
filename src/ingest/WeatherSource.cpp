@@ -116,9 +116,16 @@ std::optional<WeatherData> WeatherSource::dataAt(const QDateTime& dt) const
     const QDateTime key = QDateTime(dt.toUTC().date(),
                                     QTime(dt.toUTC().time().hour(), 0, 0),
                                     QTimeZone::utc());
-    const auto it = m_cache.find(key);
-    if (it == m_cache.end()) return std::nullopt;
-    return it.value();
+    if (const auto it = m_cache.find(key); it != m_cache.end())
+        return it.value();
+
+    // Date-only imports and UTC/local offset in bundled JSON can miss by an hour.
+    for (int deltaH : { -1, 1, -2, 2 }) {
+        const QDateTime alt = key.addSecs(deltaH * 3600);
+        if (const auto it = m_cache.find(alt); it != m_cache.end())
+            return it.value();
+    }
+    return std::nullopt;
 }
 
 double WeatherSource::computeDiscomfort(double tempC)

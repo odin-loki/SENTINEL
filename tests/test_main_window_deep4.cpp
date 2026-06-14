@@ -151,12 +151,14 @@ private slots:
 
         auto* nav = fx.window->findChild<QListWidget*>();
         QVERIFY(nav != nullptr);
-        QCOMPARE(nav->count(), 7);
+        QCOMPARE(nav->count(), 9);
 
         const QStringList expected = {
             QStringLiteral("Dashboard"),
             QStringLiteral("Crime Events"),
             QStringLiteral("Analytics"),
+            QStringLiteral("Cases"),
+            QStringLiteral("Network"),
             QStringLiteral("Investigative Leads"),
             QStringLiteral("Audit Log"),
             QStringLiteral("Settings"),

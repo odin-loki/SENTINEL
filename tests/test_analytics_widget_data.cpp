@@ -242,11 +242,16 @@ private slots:
         auto db = makeDB();
         AnalyticsWidget w(db, cfg);
         w.resize(900, 600);
-        // Look for any QPushButton with "Calibration" in its text
+        // Calibration dashboard uses "Run Holdout Analysis" (CalibrationDashboardWidget)
         const QList<QPushButton*> buttons = w.findChildren<QPushButton*>();
         bool found = false;
-        for (const auto* btn : buttons)
-            if (btn->text().contains("Calibration", Qt::CaseInsensitive)) { found = true; break; }
+        for (const auto* btn : buttons) {
+            if (btn->text().contains(QStringLiteral("Holdout"), Qt::CaseInsensitive)
+                || btn->text().contains(QStringLiteral("Calibration"), Qt::CaseInsensitive)) {
+                found = true;
+                break;
+            }
+        }
         QVERIFY(found);
     }
 
@@ -271,7 +276,8 @@ private slots:
         // Find and click the calibration run button
         const QList<QPushButton*> buttons = w.findChildren<QPushButton*>();
         for (auto* btn : buttons) {
-            if (btn->text().contains("Calibration", Qt::CaseInsensitive)) {
+            if (btn->text().contains(QStringLiteral("Holdout"), Qt::CaseInsensitive)
+                || btn->text().contains(QStringLiteral("Calibration"), Qt::CaseInsensitive)) {
                 btn->click();
                 QApplication::processEvents();
                 break;

@@ -12,16 +12,7 @@
 #include <QTimeZone>
 #include <cmath>
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wkeyword-macro"
-#endif
-#define private public
 #include "ingest/WeatherSource.h"
-#undef private
-#ifdef __GNUC__
-#  pragma GCC diagnostic pop
-#endif
 
 class FakeNetworkReply : public QNetworkReply
 {

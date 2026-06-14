@@ -6,14 +6,19 @@
 #include <QStatusBar>
 #include <QLabel>
 #include <QTimer>
+#include <QVector>
 #include <memory>
 #include "core/AppConfig.h"
 #include "core/Database.h"
+#include "core/CrimeEvent.h"
 #include "audit/ProvenanceLog.h"
+#include "api/LocalApiServer.h"
 
 class DashboardWidget;
 class EventsTableWidget;
 class AnalyticsWidget;
+class CaseWorkspaceWidget;
+class CoOffendingGraphWidget;
 class LeadsWidget;
 class SettingsWidget;
 class MapWidget;
@@ -29,6 +34,7 @@ private slots:
     void onNavItemSelected(int index);
     void onRefreshRequested();
     void onImportCsv();
+    void onImportSampleData();
     void onFetchUKPolice();
     void onStatusMessage(const QString& msg);
     void onExportEventsCsv();
@@ -42,6 +48,9 @@ private:
     void setupStatusBar();
     void setupNavigation();
     void setupToolBar();
+    void syncLocalApi();
+
+    int insertEnrichedEvents(QVector<CrimeEvent> events, const QString& sourceLabel);
 
     AppConfig& m_cfg;
     std::shared_ptr<Database> m_db;
@@ -53,10 +62,12 @@ private:
 
     ProvenanceLog       m_provenanceLog;
 
-    DashboardWidget*    m_dashboard;
-    EventsTableWidget*  m_eventsTable;
-    AnalyticsWidget*    m_analytics;
-    LeadsWidget*        m_leads;
+    DashboardWidget*         m_dashboard;
+    EventsTableWidget*       m_eventsTable;
+    AnalyticsWidget*         m_analytics;
+    CaseWorkspaceWidget*     m_caseWorkspace;
+    CoOffendingGraphWidget*  m_coOffendingGraph;
+    LeadsWidget*             m_leads;
     AuditLogWidget*     m_auditLog;
     SettingsWidget*     m_settings;
     DebugConsoleWidget* m_debugConsole;
@@ -64,4 +75,5 @@ private:
     QLabel* m_statusLabel;
     QLabel* m_eventCountLabel;
     QTimer* m_autoRefreshTimer;
+    std::unique_ptr<LocalApiServer> m_localApi;
 };

@@ -68,6 +68,25 @@ private:
                      qPrintable(db->lastError()));
     }
 
+    // Month holdout needs ≥20 Jan–Apr train and ≥10 May+ test dated events.
+    static void seedHoldoutCalibrationEvents(const std::shared_ptr<Database>& db)
+    {
+        const QDateTime trainStart(QDate(2024, 1, 1), QTime(10, 0), QTimeZone::utc());
+        for (int i = 0; i < 25; ++i) {
+            CrimeEvent ev = makeEvent(i, 0);
+            ev.occurredAt = trainStart.addDays(i);
+            ev.timestamp  = ev.occurredAt.value();
+            QVERIFY2(db->insertEvent(ev), qPrintable(db->lastError()));
+        }
+        const QDateTime testStart(QDate(2024, 5, 1), QTime(10, 0), QTimeZone::utc());
+        for (int i = 0; i < 12; ++i) {
+            CrimeEvent ev = makeEvent(100 + i, 0);
+            ev.occurredAt = testStart.addDays(i);
+            ev.timestamp  = ev.occurredAt.value();
+            QVERIFY2(db->insertEvent(ev), qPrintable(db->lastError()));
+        }
+    }
+
     static QLabel* findSummaryLabel(const AnalyticsWidget& widget)
     {
         for (auto* lbl : widget.findChildren<QLabel*>()) {
@@ -140,7 +159,7 @@ private slots:
         tabs->setCurrentIndex(4);
         QApplication::processEvents();
 
-        auto* btn = findButtonByText(widget, QStringLiteral("Run Calibration"));
+        auto* btn = findButtonByText(widget, QStringLiteral("Run Holdout Analysis"));
         QVERIFY(btn != nullptr);
 
         btn->click();
@@ -282,13 +301,13 @@ private slots:
     {
         auto cfg = memCfg();
         auto db  = openDb();
-        seedEvents(db, 30);
+        seedHoldoutCalibrationEvents(db);
 
         AnalyticsWidget widget(db, cfg);
         widget.findChild<QTabWidget*>()->setCurrentIndex(4);
         QApplication::processEvents();
 
-        auto* btn = findButtonByText(widget, QStringLiteral("Run Calibration"));
+        auto* btn = findButtonByText(widget, QStringLiteral("Run Holdout Analysis"));
         QVERIFY(btn != nullptr);
         btn->click();
         QApplication::processEvents();

@@ -1,4 +1,5 @@
 #include "models/SeriesDetector.h"
+#include "core/AppConfig.h"
 #include "core/SentinelLogger.h"
 #include <cmath>
 #include <algorithm>
@@ -40,9 +41,43 @@ SeriesDetector::nearRepeatFor(const QString& crimeType)
 // Constructor
 // ---------------------------------------------------------------------------
 
-SeriesDetector::SeriesDetector(double epsKm, double epsDays, int minSamples)
-    : m_epsKm(epsKm), m_epsDays(epsDays), m_minSamples(minSamples)
+SeriesDetector::SeriesDetector(double epsKm, double epsDays, int minSamples,
+                               const QMap<QString, double>& epsOverridesKm)
+    : m_epsKm(epsKm)
+    , m_epsDays(epsDays)
+    , m_minSamples(minSamples)
+    , m_epsOverridesKm(epsOverridesKm)
 {}
+
+SeriesDetector SeriesDetector::fromConfig(const AppConfig& cfg)
+{
+    return SeriesDetector(cfg.seriesEpsKm, cfg.seriesEpsDays, cfg.seriesMinEvents,
+                          cfg.seriesEpsByCrimeType);
+}
+
+QString SeriesDetector::crimeBucket(const QString& crimeType)
+{
+    const QString key = crimeType.toLower().replace(QLatin1Char(' '), QLatin1Char('_'));
+    if (key.contains(QStringLiteral("burgl")))
+        return QStringLiteral("burglary");
+    if (key.contains(QStringLiteral("theft")) || key.contains(QStringLiteral("larcen"))
+        || key.contains(QStringLiteral("shoplift")))
+        return QStringLiteral("theft");
+    if (key.contains(QStringLiteral("assault")) || key.contains(QStringLiteral("violent"))
+        || key.contains(QStringLiteral("robbery")) || key.contains(QStringLiteral("homicide"))
+        || key.contains(QStringLiteral("weapon")))
+        return QStringLiteral("violent");
+    return QStringLiteral("other");
+}
+
+double SeriesDetector::epsKmFor(const QString& crimeType) const
+{
+    const QString bucket = crimeBucket(crimeType);
+    const auto it = m_epsOverridesKm.constFind(bucket);
+    if (it != m_epsOverridesKm.constEnd() && it.value() > 0.0)
+        return it.value();
+    return m_epsKm;
+}
 
 // ---------------------------------------------------------------------------
 // 3D Euclidean distance helper
@@ -127,64 +162,46 @@ QVector<int> SeriesDetector::dbscan(
 // detectSeries()
 // ---------------------------------------------------------------------------
 
-QVector<CrimeSeries> SeriesDetector::detectSeries(
-    const QVector<SeriesEvent>& events)
+QVector<CrimeSeries> SeriesDetector::clusterSubset(const QVector<SeriesEvent>& events,
+                                                    double epsKm,
+                                                    int seriesIdOffset) const
 {
-    if (events.isEmpty()) return {};
+    if (events.isEmpty())
+        return {};
 
-    // Deduplicate by eventId — keep first occurrence, skip later duplicates
-    QVector<SeriesEvent> uniqueEvents;
-    uniqueEvents.reserve(events.size());
-    QSet<QString> seenIds;
-    for (const auto& ev : events) {
-        if (!ev.eventId.isEmpty() && seenIds.contains(ev.eventId))
-            continue;
-        if (!ev.eventId.isEmpty())
-            seenIds.insert(ev.eventId);
-        uniqueEvents.append(ev);
-    }
-
-    // Convert to normalised 3D feature space:
-    //   x = lat_deg  (spatial)
-    //   y = lon_deg  (spatial)
-    //   z = tDays normalised to same scale as spatial epsilon
-    //
-    // eps_spatial_deg = epsKm / 111.0
-    // eps_temporal_normalised = epsDays / (epsDays / (epsKm / 111.0)) = epsKm/111.0
-    // So z_scale = (epsKm / 111.0) / epsDays  →  z = tDays * z_scale
-    double epsDeg    = m_epsKm / 111.0;
-    double zScale    = (m_epsDays > 0.0) ? (epsDeg / m_epsDays) : 1.0;
+    const double epsDeg = epsKm / 111.0;
+    const double zScale = (m_epsDays > 0.0) ? (epsDeg / m_epsDays) : 1.0;
 
     QVector<std::array<double, 3>> pts;
-    pts.reserve(uniqueEvents.size());
-    for (const auto& ev : uniqueEvents) {
+    pts.reserve(events.size());
+    for (const auto& ev : events)
         pts.append({ ev.lat, ev.lon, ev.tDays * zScale });
-    }
 
-    QVector<int> labels = dbscan(pts, epsDeg, m_minSamples);
+    const QVector<int> labels = dbscan(pts, epsDeg, m_minSamples);
 
-    // Group events by cluster id
     QMap<int, QVector<int>> clusters;
     for (int i = 0; i < labels.size(); ++i) {
-        if (labels[i] >= 0) clusters[labels[i]].append(i);
+        if (labels[i] >= 0)
+            clusters[labels[i]].append(i);
     }
 
     QVector<CrimeSeries> result;
     result.reserve(clusters.size());
 
+    int localId = 0;
     for (auto it = clusters.constBegin(); it != clusters.constEnd(); ++it) {
         const QVector<int>& idxs = it.value();
         CrimeSeries series;
-        series.seriesId = QStringLiteral("SERIES-%1").arg(it.key(), 4, 10, QChar('0'));
+        series.seriesId = QStringLiteral("SERIES-%1")
+                              .arg(seriesIdOffset + localId++, 4, 10, QChar('0'));
 
         double sumLat = 0.0, sumLon = 0.0;
         double minT = std::numeric_limits<double>::max();
         double maxT = std::numeric_limits<double>::lowest();
-
         QMap<QString, int> typeCounts;
 
         for (int idx : idxs) {
-            const SeriesEvent& ev = uniqueEvents[idx];
+            const SeriesEvent& ev = events[idx];
             series.members.append(ev);
             sumLat += ev.lat;
             sumLon += ev.lon;
@@ -203,7 +220,6 @@ QVector<CrimeSeries> SeriesDetector::detectSeries(
         series.firstDays   = minT;
         series.lastDays    = maxT;
 
-        // Dominant crime type by frequency
         int maxCount = 0;
         for (auto tc = typeCounts.constBegin(); tc != typeCounts.constEnd(); ++tc) {
             if (tc.value() > maxCount) {
@@ -213,6 +229,52 @@ QVector<CrimeSeries> SeriesDetector::detectSeries(
         }
 
         result.append(series);
+    }
+
+    return result;
+}
+
+QVector<CrimeSeries> SeriesDetector::detectSeries(
+    const QVector<SeriesEvent>& events)
+{
+    if (events.isEmpty()) return {};
+
+    // Deduplicate by eventId — keep first occurrence, skip later duplicates
+    QVector<SeriesEvent> uniqueEvents;
+    uniqueEvents.reserve(events.size());
+    QSet<QString> seenIds;
+    for (const auto& ev : events) {
+        if (!ev.eventId.isEmpty() && seenIds.contains(ev.eventId))
+            continue;
+        if (!ev.eventId.isEmpty())
+            seenIds.insert(ev.eventId);
+        uniqueEvents.append(ev);
+    }
+
+    // Group by crime-type bucket so each cluster uses the appropriate eps override
+    QMap<QString, QVector<SeriesEvent>> buckets;
+    for (const auto& ev : uniqueEvents)
+        buckets[crimeBucket(ev.crimeType)].append(ev);
+
+    QVector<CrimeSeries> result;
+    int seriesOffset = 0;
+
+    const QStringList bucketOrder = {
+        QStringLiteral("burglary"),
+        QStringLiteral("theft"),
+        QStringLiteral("violent"),
+        QStringLiteral("other"),
+    };
+
+    for (const QString& bucket : bucketOrder) {
+        if (!buckets.contains(bucket))
+            continue;
+        const QVector<SeriesEvent>& bucketEvents = buckets[bucket];
+        const double epsKm = epsKmFor(bucketEvents.first().crimeType);
+        const auto bucketSeries = clusterSubset(bucketEvents, epsKm, seriesOffset);
+        seriesOffset += bucketSeries.size();
+        for (const auto& s : bucketSeries)
+            result.append(s);
     }
 
     qCInfo(lcModels) << "Series detection found" << result.size() << "series from"

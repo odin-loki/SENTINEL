@@ -82,7 +82,7 @@ private slots:
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TestSpecCompliance — verify benchmark targets from SENTINEL_README.md
+// TestSpecCompliance — verify benchmark targets documented in project README
 // ─────────────────────────────────────────────────────────────────────────────
 
 class TestSpecCompliance : public QObject {

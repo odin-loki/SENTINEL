@@ -3,6 +3,7 @@
 
 #pragma once
 #include <QString>
+#include <QMap>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QJsonObject>
@@ -24,6 +25,8 @@ struct AppConfig {
     int seriesMinEvents     = 3;
     double seriesEpsKm      = 0.3;       // ~300 m spatial epsilon
     double seriesEpsDays    = 14.0;
+    // Per-crime-type DBSCAN spatial epsilon overrides (km); 0 = use seriesEpsKm
+    QMap<QString, double> seriesEpsByCrimeType;
     double qualityThreshold = 0.3;       // below this → quarantine
     bool autoRefreshEnabled = false;
     int refreshIntervalSeconds = 3600;   // was autoRefreshMinutes (in seconds now)
@@ -61,6 +64,10 @@ struct AppConfig {
     double  mapZoomLevel     = 14.0;    // initial map zoom level (1–20)
     QString exportDirectory  = "";      // default export path
     int     maxLeadCount     = 50;      // max leads shown in the leads panel
+
+    // Local read-only REST API (localhost only)
+    bool enableLocalApi      = false;
+    int  localApiPort        = 8765;    // valid: [1024, 65535]
 
     // ── Load from default QSettings location ──────────────────────────────────
     static AppConfig load() {
@@ -102,7 +109,12 @@ struct AppConfig {
     // ── Clamp parameters to valid ranges; returns true if already valid ───────
     bool validate();
 
+    // Effective series DBSCAN eps for a crime-type bucket (burglary/theft/violent/other)
+    double effectiveSeriesEpsKm(const QString& crimeType) const;
+
 private:
+    static void loadSeriesEpsOverrides(QSettings& settings, AppConfig& c);
+    static void saveSeriesEpsOverrides(QSettings& settings, const AppConfig& c);
     static AppConfig loadFrom(QSettings& settings) {
         AppConfig c;
         c.openWeatherKey         = settings.value("api/openweather", "").toString();
@@ -115,6 +127,7 @@ private:
         c.seriesMinEvents        = settings.value("model/series_min_events", 3).toInt();
         c.seriesEpsKm            = settings.value("model/series_eps_km", 0.3).toDouble();
         c.seriesEpsDays          = settings.value("model/series_eps_days", 14.0).toDouble();
+        loadSeriesEpsOverrides(settings, c);
         c.qualityThreshold       = settings.value("model/quality_threshold", 0.3).toDouble();
         // Clamp alert thresholds to [0, 1]
         c.alertElevated  = std::clamp(settings.value("alert/elevated",  0.30).toDouble(), 0.0, 1.0);
@@ -140,6 +153,8 @@ private:
         c.maxLeadCount    = std::clamp(settings.value("ui/max_lead_count", 50).toInt(), 1, 10000);
         c.poissonGridSize = std::clamp(settings.value("model/poisson_grid_size", 50).toInt(), 10, 500);
         c.kdeGridSize     = std::clamp(settings.value("model/kde_grid_size", 50).toInt(), 10, 500);
+        c.enableLocalApi  = settings.value("api/local_enabled", false).toBool();
+        c.localApiPort    = std::clamp(settings.value("api/local_port", 8765).toInt(), 1024, 65535);
         return c;
     }
 
@@ -154,6 +169,7 @@ private:
         settings.setValue("model/series_min_events",   seriesMinEvents);
         settings.setValue("model/series_eps_km",       seriesEpsKm);
         settings.setValue("model/series_eps_days",     seriesEpsDays);
+        saveSeriesEpsOverrides(settings, *this);
         settings.setValue("model/quality_threshold",   qualityThreshold);
         settings.setValue("alert/elevated",          alertElevated);
         settings.setValue("alert/high",              alertHigh);
@@ -176,6 +192,8 @@ private:
         settings.setValue("ui/max_lead_count",   maxLeadCount);
         settings.setValue("model/poisson_grid_size", poissonGridSize);
         settings.setValue("model/kde_grid_size",     kdeGridSize);
+        settings.setValue("api/local_enabled",       enableLocalApi);
+        settings.setValue("api/local_port",          localApiPort);
         settings.sync();
     }
 };

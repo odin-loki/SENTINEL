@@ -32,7 +32,8 @@ public:
                                     const QDateTime& to = {},
                                     double latMin = -90, double latMax = 90,
                                     double lonMin = -180, double lonMax = 180,
-                                    int limit = 5000) const;
+                                    int limit = 5000,
+                                    double minQuality = -1.0) const;
     // UI-friendly overload: QDate range + keyword search
     QVector<CrimeEvent> queryEvents(const QString& crimeType,
                                     const QDate& from,
@@ -61,15 +62,18 @@ public:
     int getTotalEventCount() const { return eventCount(); }
 
     QVector<CrimeEvent> getRecentEvents(int n) const {
-        return queryEvents(QString{}, QDateTime{}, QDateTime{}, -90, 90, -180, 180, n);
+        return queryEvents(QString{}, QDateTime{}, QDateTime{}, -90, 90, -180, 180, n,
+                           m_qualityThreshold);
     }
 
     QVector<CrimeEvent> getEventsSince(const QDateTime& since) const {
-        return queryEvents(QString{}, since, QDateTime{});
+        return queryEvents(QString{}, since, QDateTime{}, -90, 90, -180, 180, 5000,
+                           m_qualityThreshold);
     }
 
     QVector<CrimeEvent> getAllEvents() const {
-        return queryEvents(QString{}, QDateTime{}, QDateTime{});
+        return queryEvents(QString{}, QDateTime{}, QDateTime{}, -90, 90, -180, 180, 5000,
+                           m_qualityThreshold);
     }
 
     QMap<QString,int> getCrimeTypeCounts() const { return crimeTypeCounts(); }
@@ -91,6 +95,9 @@ public:
 
     double getAverageQualityScore() const;
 
+    void setQualityThreshold(double threshold) { m_qualityThreshold = threshold; }
+    double qualityThreshold() const { return m_qualityThreshold; }
+
     QVector<InvestigativeLead> getLeads(const QString& eventId = {}) const {
         return queryLeads(eventId);
     }
@@ -106,6 +113,7 @@ private:
     QSqlDatabase m_db;
     QString m_connName;   // unique per-instance to avoid Qt SQL pool collisions
     QString m_path;
+    double m_qualityThreshold = 0.3;
     mutable QString m_lastError;
 
     static CrimeEvent rowToEvent(const QSqlQuery& q);

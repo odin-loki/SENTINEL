@@ -1,6 +1,18 @@
 # Build output
 build/
+build-msvc-release/
+build-release/
+build-release-msvc/
+build-mingw/
 build2/
+build_iter*/
+build-release-wsl/
+packaging/pkg/
+dist/
+$Stage/
+*.log
+ctest_*.log.tmp*
+core_*.txt
 *.exe
 *.dll
 *.o

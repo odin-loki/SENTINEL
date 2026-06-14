@@ -7,11 +7,15 @@
 #include "core/Database.h"
 #include "core/SentinelLogger.h"
 
+#ifndef SENTINEL_VERSION
+#define SENTINEL_VERSION "1.0.0"
+#endif
+
 int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
     app.setApplicationName("Sentinel");
-    app.setApplicationVersion("1.0.0");
+    app.setApplicationVersion(QStringLiteral(SENTINEL_VERSION));
     app.setOrganizationName("SENTINEL");
 
     SentinelLogger::instance().install();

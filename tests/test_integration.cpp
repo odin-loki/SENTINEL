@@ -34,6 +34,7 @@
 #include "inference/EvidenceScorer.h"
 #include "inference/AnomalyDetector.h"
 #include "inference/HintEngine.h"
+#include "test_update_checker.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Synthetic data generators
@@ -1005,11 +1006,19 @@ static int runTest(QObject* obj, const char* logFile)
 int main(int argc, char** argv)
 {
     QCoreApplication app(argc, argv);
+
+    // CTest alias: test_integration TestUpdateChecker
+    for (int i = 1; i < argc; ++i) {
+        if (qstrcmp(argv[i], "TestUpdateChecker") == 0)
+            return runUpdateCheckerTests(1, argv);
+    }
+
     int r = 0;
     { TestFullPipeline          t1; r |= runTest(&t1, "integ_pipeline.txt"); }
     { TestCSVImportPipeline     t2; r |= runTest(&t2, "integ_csv.txt"); }
     { TestPerformanceBenchmarks t3; r |= runTest(&t3, "integ_perf.txt"); }
     { TestSpecCompliance        t4; r |= runTest(&t4, "integ_spec.txt"); }
+    r |= runUpdateCheckerTests(1, argv);
     return r;
 }
 

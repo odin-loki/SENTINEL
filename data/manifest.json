@@ -1,0 +1,49 @@
+﻿{
+    "datasets":  [
+                     {
+                         "source":  "https://data.police.uk/",
+                         "path":  "crimes/uk_metropolitan_street_2024.csv",
+                         "rows":  57099,
+                         "id":  "uk_police",
+                         "license":  "OGL v3.0"
+                     },
+                     {
+                         "source":  "https://data.cincinnati-oh.gov/",
+                         "path":  "crimes/cincinnati_pdi_crimes_sample.csv",
+                         "rows":  15000,
+                         "id":  "cincinnati_sample",
+                         "license":  "public open data"
+                     },
+                     {
+                         "source":  "https://data.sfgov.org/",
+                         "path":  "crimes/sfpd_incidents_sample.csv",
+                         "rows":  15000,
+                         "id":  "sfpd_sample",
+                         "license":  "public open data"
+                     },
+                     {
+                         "source":  "project fixture",
+                         "path":  "crimes/london_crimes_2024.csv",
+                         "rows":  100,
+                         "id":  "london_narrative"
+                     },
+                     {
+                         "source":  "derived Chicago arrests",
+                         "path":  "co_offending/chicago_co_offending.csv",
+                         "rows":  1960,
+                         "id":  "chicago_co_offending"
+                     },
+                     {
+                         "source":  "http://konect.cc/networks/moreno_crime/",
+                         "path":  "co_offending/moreno_person_crime.csv",
+                         "rows":  1476,
+                         "id":  "moreno_person_crime"
+                     },
+                     {
+                         "path":  "weather/london_2024_h1.json",
+                         "source":  "https://open-meteo.com/",
+                         "id":  "london_weather_h1",
+                         "hourly_records":  4368
+                     }
+                 ]
+}

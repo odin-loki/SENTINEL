@@ -1,431 +1,434 @@
-﻿# SENTINEL â€” Crime Analytics & Predictive Threat Assessment System
+﻿# SENTINEL
 
-<p align="center">
-  <strong>C++23 Â· Qt 6 Â· SQLite Â· 393 passing tests</strong>
-</p>
+**Crime analytics and investigative decision support — C++23 / Qt 6 desktop application**
 
-> A fully auditable, standalone desktop application for spatiotemporal crime prediction, investigative lead generation, and anomaly detection. Every prediction is traceable to its data source, mathematical model, and quantified uncertainty. No proprietary APIs. No black-box AI.
+SENTINEL is a standalone desktop system for ingesting public crime data, running transparent statistical models, and producing ranked investigative leads with full provenance. Every output can be traced back to its source record, model, and parameters. The stack is implemented entirely in C++ with Qt 6 — no external ML runtimes, no opaque model APIs.
 
 ---
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Statistical Models](#statistical-models)
-- [Data Sources](#data-sources)
-- [Project Structure](#project-structure)
-- [Building](#building)
-- [Testing](#testing)
-- [Configuration](#configuration)
-- [Design Principles](#design-principles)
-- [Academic References](#academic-references)
+1. [What SENTINEL Does](#what-sentinel-does)
+2. [What We Have Built](#what-we-have-built)
+3. [Current State](#current-state)
+4. [Strategic Plan](#strategic-plan)
+5. [Architecture](#architecture)
+6. [Local Data & Testing](#local-data--testing)
+7. [Building & Running](#building--running)
+8. [Releases & Installation](#releases--installation)
+9. [Design Principles](#design-principles)
+
+**Analysts:** see **[docs/ANALYST_GUIDE.md](docs/ANALYST_GUIDE.md)** for portable ZIP install, sample data import, leads review, and export.
+
+**Backlog:** see **[REMAINING.md](REMAINING.md)** for Phase 3–5 work not yet shipped.
 
 ---
 
-## Overview
+## What SENTINEL Does
 
-SENTINEL ingests heterogeneous public crime data streams, applies a layered probabilistic modelling pipeline, and delivers:
+SENTINEL supports analysts and researchers who need to:
 
-- **Spatiotemporal crime predictions** with confidence intervals
-- **Investigative leads** ranked by evidential weight with contradiction detection  
-- **Geographic offender profiles** (Rossmo CGT formula)
-- **Near-repeat victimisation** alerts with decay modelling
-- **Anomaly signals** with uncertainty decomposition
-- **Full provenance tracing** â€” every output is linked to its source data and computation chain
+- **Ingest** heterogeneous crime feeds (UK Police API, open-data CSV exports, weather time series)
+- **Score** data quality and quarantine unreliable records before modelling
+- **Extract** modus operandi features and classify crime types from narratives
+- **Model** spatiotemporal risk (Poisson, Hawkes, KDE hotspots, series linkage, ensembles)
+- **Infer** geographic profiles, MO similarity, co-offending networks, and anomalies
+- **Generate** ranked investigative leads with contradiction detection and evidence weighting
+- **Audit** every step through a provenance log and exportable reports
+- **Evaluate** predictions with calibration, fairness, and hotspot-accuracy metrics
+
+The application ships as a native desktop UI (dashboard, map, events table, leads panel, analytics, audit log) backed by SQLite persistence.
 
 ---
 
-## Features
+## What We Have Built
 
-### Data Ingestion
-| Component | Description |
-|---|---|
-| `UKPoliceSource` | UK Police Open Data API (`data.police.uk`) â€” 43 force areas, real-time + historical |
-| `WeatherSource` | Open-Meteo free weather API â€” historical hourly data for weather-crime correlation |
-| `CsvImporter` | Auto-column detection for Chicago PD, NYC NYPD, LA LAPD, ABS Australian data formats |
-| `DataQualityScorer` | Composite quality scoring (completeness, temporal/spatial precision, source reliability) |
+### Core platform
 
-### NLP Pipeline
-| Component | Description |
-|---|---|
-| `MOExtractor` | Regex-based Modus Operandi extraction: entry method, target type, time of day, weapons, items taken, solo/group |
-| `CrimeClassifier` | Weighted keyword TF-IDF classifier â€” 13 crime categories, severity scoring, sentiment analysis, threat detection |
+| Area | Delivered |
+|------|-----------|
+| **Runtime** | C++23 desktop app with Qt 6 widgets, charts, networking, and SQL |
+| **Persistence** | SQLite database with schema versioning, event CRUD, provenance storage |
+| **Configuration** | `QSettings`-backed pipeline parameters, alert thresholds, UI preferences |
+| **Logging** | Ring-buffer log handler with category filtering and debug console widget |
+| **Export** | Markdown, JSON, CSV, and HTML output for events and lead reports |
 
-### Statistical Models
-| Model | Method |
-|---|---|
-| `PoissonBaseline` | Non-homogeneous Poisson process + Negative Binomial overdispersion; PMF/PPF/CI |
-| `HawkesProcess` | Self-exciting Hawkes process for near-repeat victimisation (Mohler et al. 2011) |
-| `SeriesDetector` | Spatiotemporal DBSCAN + MO Jaccard + Haversine linkage probability |
-| `KDEHotspot` | 2D Gaussian KDE, Silverman bandwidth, PAI area fraction, greedy peak suppression |
-| `GPRegression` | Gaussian Process regression, squared-exponential kernel, Cholesky posterior, log marginal likelihood |
-| `BayesianHierarchical` | Gamma-Poisson conjugate hierarchy with empirical Bayes hyperparameter estimation |
-| `RiskForecaster` | Multi-day zone risk forecast combining Poisson + temporal features + recent escalation |
-| `EnsemblePredictor` | Weighted ensemble of Poisson + Hawkes + isotonic calibration, epistemic/aleatoric uncertainty decomposition |
-| `NearRepeatVictimisation` | Knox ratio space-time clustering test, linear decay alert scoring, crime-type calibrated bandwidths |
-| `TemporalFeatures` | Cyclical encoding (sin/cos), lunar phase, sun altitude, payday proximity, night/weekend flags |
+### Data ingestion
 
-### Inference Engine
-| Component | Description |
-|---|---|
-| `GeographicProfiler` | Rossmo CGT probability surface, 50%/80% search area estimation |
-| `MOAnalyser` | TF-IDF + cosine similarity against resolved case database, topK matching |
-| `EvidenceScorer` | Bayesian likelihood ratio updating (Taroni et al. 2014), Bayes factor, posterior probability |
-| `AnomalyDetector` | Isolation scoring + z-score temporal/spatial + combined signal with configurable contamination |
-| `CoOffendingAnalyser` | PageRank, Brandes betweenness centrality, community detection, NetworkLead generation |
-| `HintEngine` | Ranked investigative leads with contradiction detection, quality scoring, and full provenance |
-| `LeadReportGenerator` | Markdown + HTML report generation with provenance chains |
+| Component | Capability |
+|-----------|------------|
+| `UKPoliceSource` | Live and historical UK street crime via `data.police.uk` |
+| `WeatherSource` | Open-Meteo hourly weather cache for crime–weather correlation |
+| `CsvImporter` | Auto-detects columns across UK, US city, and generic crime CSV layouts |
+| `DataQualityScorer` | Completeness, temporal/spatial precision, source reliability, quarantine threshold |
 
-### Benchmarking & Fairness
-| Component | Description |
-|---|---|
-| `BenchmarkMetrics` | PAI, PEI, SER, AUC-ROC, AUC-PR, MAE, RMSE, Brier score, MRR, Precision@K |
-| `BiasAuditor` | Disparate impact, equal opportunity difference, feedback loop detection |
-| `CalibrationAnalyser` | ECE, MCE, ACE, reliability diagram, isotonic regression calibration |
+### NLP (classical, inspectable)
 
-### User Interface
-| Widget | Description |
-|---|---|
-| `DashboardWidget` | Live stats cards, recent events, crime type distribution, Bayesian zone risk panel |
-| `MapWidget` | Custom QPainter spatial view with risk heatmap overlay, KDE hotspot regions, zoom/pan |
-| `EventsTableWidget` | Filterable crime event browser with quality badges and detail panel |
-| `LeadsWidget` | Ranked investigative leads with interactive evidence scorer, series table |
-| `AnalyticsWidget` | Qt Charts: hourly patterns, crime type pie, temporal trend, calibration curve |
-| `TemporalHeatmapWidget` | Weekday Ã— hour crime density heatmap |
-| `AuditLogWidget` | Filterable provenance chain viewer per event |
-| `DebugConsoleWidget` | Real-time log viewer with level and category filtering |
-| `SettingsWidget` | API keys, model parameters, alert thresholds, GP hyperparameters |
+| Component | Capability |
+|-----------|------------|
+| `MOExtractor` | Entry method, weapons, target type, solo/group, time-of-day from text |
+| `CrimeClassifier` | Keyword TF-IDF classification across 13 crime categories with severity scoring |
+
+### Statistical models
+
+| Model | Role |
+|-------|------|
+| `PoissonBaseline` | Zone × time × crime-type rate baselines with Negative Binomial overdispersion |
+| `HawkesProcess` | Self-exciting near-repeat victimisation |
+| `SeriesDetector` | Spatiotemporal DBSCAN + MO Jaccard linkage |
+| `KDEHotspot` | 2D Gaussian kernel density hotspots with PAI support |
+| `GPRegression` | Squared-exponential GP with Cholesky posterior |
+| `BayesianHierarchical` | Gamma–Poisson conjugate zone hierarchy |
+| `RiskForecaster` | Multi-day zone risk from Poisson + temporal features |
+| `EnsemblePredictor` | Weighted ensemble with epistemic/aleatoric uncertainty split |
+| `NearRepeatVictimisation` | Knox ratio clustering and decay-scored alerts |
+| `TemporalFeatures` | Cyclical time encoding, lunar phase, payday proximity, night/weekend flags |
+
+### Inference engine
+
+| Component | Role |
+|-----------|------|
+| `GeographicProfiler` | Rossmo CGT probability surface with search-area thresholds |
+| `MOAnalyser` | TF-IDF cosine similarity against resolved cases |
+| `EvidenceScorer` | Bayesian likelihood-ratio updating |
+| `AnomalyDetector` | Isolation scoring + temporal/spatial z-scores |
+| `CoOffendingAnalyser` | PageRank, betweenness, community detection on person–incident graphs |
+| `HintEngine` | Ranked leads with contradiction detection and quality weighting |
+| `LeadReportGenerator` | Markdown/HTML investigative reports with provenance chains |
+
+### Benchmarking & fairness
+
+| Component | Role |
+|-----------|------|
+| `BenchmarkMetrics` | PAI, PEI, SER, AUC, MAE, RMSE, Brier, MRR, Precision@K |
+| `CalibrationAnalyser` | ECE, MCE, reliability diagrams, isotonic recalibration |
+| `BiasAuditor` | Disparate impact, equal opportunity, feedback-loop risk |
+
+### User interface (9 pages)
+
+Sidebar navigation — all wired to the live pipeline:
+
+| # | Page | Widget |
+|---|------|--------|
+| 0 | Dashboard | Map with risk overlay, summary metrics |
+| 1 | Crime Events | Filterable events table |
+| 2 | Analytics | Charts, **Calibration** dashboard (live reliability diagram), hotspot PAI, heatmaps |
+| 3 | Cases | Case filter, events table, series merge/split overrides, lead history, Rossmo CGT heatmap, Export Case Report |
+| 4 | Network | Co-offending graph with zoom/pan, node click, Load CSV, Load from DB (SQLite) |
+| 5 | Investigative Leads | Ranked leads + detected series |
+| 6 | Audit Log | Provenance chain viewer |
+| 7 | Settings | Pipeline thresholds, quality gate, theme |
+| 8 | Debug Console | Live log output |
+
+### Test engineering (30 deep-audit iterations)
+
+- **495 automated tests** across unit, integration, stress, benchmark, and headless UI layers
+- Deep-audit iterations added focused test files per component (ingest, models, inference, UI widgets, export, provenance)
+- Full suite runs in under ~40 seconds parallelised; local real-data integration test runs in ~6 minutes
+
+### Real-world local datasets
+
+Curated data lives under `data/` and is exercised by `test_local_datasets` and `test_real_data_evaluation`:
+
+**Run real-data tests in one step:**
+
+```powershell
+& scripts/run_real_data_tests.ps1
+```
+
+**Evaluation report:** [docs/REAL_DATA_EVALUATION.md](docs/REAL_DATA_EVALUATION.md)
+
+| Dataset | Rows | Pipeline coverage |
+|---------|------|-------------------|
+| UK Metropolitan street crimes (H1 2024) | 57,099 | UK API format, lat/lon, crime types, monthly dates |
+| Cincinnati PDI sample | 15,000 | US CSV import, coords, offense types |
+| SFPD incidents sample | 15,000 | US CSV import |
+| London narrative fixture | 100 | MO extraction, classification |
+| Chicago co-offending (derived) | 1,960 | Shared-case arrest network |
+| Moreno crime network | 1,476 | Person–crime bipartite graph |
+| London weather H1 2024 | 4,368 hourly | Open-Meteo JSON parse and cache lookup |
+
+Fetch script: `data/scripts/fetch_datasets.ps1` — see `data/README.md` for licenses and refresh instructions.
+
+---
+
+## Current State
+
+### Strengths
+
+1. **End-to-end pipeline is real and tested** — ingest → NLP → models → inference → UI → audit, not a prototype skeleton.
+2. **Transparency** — every algorithm is open C++; weights and thresholds are configurable and inspectable.
+3. **Test depth** — 495 tests with iterative hardening across edge cases, stress loads, and widget behaviour.
+4. **Real data validation** — local datasets prove importers and models against actual UK/US exports, co-offending graphs, and weather JSON.
+5. **Investigative workflow** — leads, evidence scoring, geographic profiling, and co-offending analysis are integrated, not isolated demos.
+
+### Gaps and limitations (honest assessment)
+
+| Gap | Impact |
+|-----|--------|
+| NLP is rule/keyword-based | Misses nuanced narrative structure; no embedding or transformer layer |
+| Single-machine desktop only | No multi-user deployment or federated ingestion; read-only local REST API shipped (`LocalApiServer`) |
+| Limited live connectors | UK Police + weather + CSV; no streaming social, court, or news feeds |
+| Map is custom QPainter | Functional but not a full GIS (no tile server, routing, or shapefile import) |
+| Co-offending needs person IDs | Real agencies rarely publish identifiable arrest graphs at scale |
+| Narrative NLP depth | Rule/keyword MO extraction only; no optional ONNX sentence encoder yet |
+| No production deployment story | **Portable ZIP + NSIS setup (Windows) and TGZ/DEB (Linux) ship in v1.0.0**; code signing remains; push tag `v1.0.0` to trigger GitHub Release |
+
+### Readiness snapshot
+
+| Capability | Status |
+|------------|--------|
+| Research / demo / analyst workstation | **Ready** |
+| Native install (Windows ZIP/NSIS, Linux TGZ/DEB) | **Ready** — see [docs/RELEASE.md](docs/RELEASE.md) |
+| Batch CSV + API ingest for UK/US cities | **Ready** |
+| Lead generation with provenance | **Ready** |
+| Model benchmarking on held-out data | **Ready** (metrics implemented; benchmark harness needs curated evaluation sets) |
+| Operational multi-agency deployment | **Not ready** |
+| Real-time streaming ingestion | **Not ready** |
+
+---
+
+## Strategic Plan
+
+**Full roadmap with phase status:** [docs/ROADMAP.md](docs/ROADMAP.md)
+
+This plan assumes SENTINEL continues as an **auditable desktop analytics platform** first, with optional service/API layers added only where they do not compromise traceability.
+
+### Vision (18–24 months)
+
+SENTINEL becomes the reference implementation for **transparent crime analytics**: agencies and researchers can import their own data, reproduce every score, export court-ready provenance reports, and benchmark model fairness before operational use.
+
+### Phase 1 — Consolidate & operationalise ✅ Complete
+
+**Goal:** Turn the current build into a reliable analyst tool someone can use daily.
+
+| Initiative | Status |
+|------------|--------|
+| Data workspace UI | **Done** — CSV / UK API / sample import → quality summary → Analytics |
+| Weather enrichment | **Done** — `IngestEnricher` attaches bundled weather cache on ingest |
+| Evaluation harness | **Done** — [REAL_DATA_EVALUATION.md](docs/REAL_DATA_EVALUATION.md) |
+| Packaging | **Done** — primary build: `& packaging/windows/deploy_portable.ps1 -BuildDir build` |
+| Analyst guide | **Done** — [ANALYST_GUIDE.md](docs/ANALYST_GUIDE.md) |
+
+### Phase 2 — Depth on investigation ✅ Complete
+
+**Goal:** Make SENTINEL indispensable for case linkage and network analysis.
+
+| Initiative | Status | Shipped |
+|------------|--------|---------|
+| **Case workspace** | **Done** | `CaseWorkspaceWidget`: filter, events, series merge/split overrides, lead history, Rossmo CGT heatmap (`GeoProfileHeatmapWidget`), Export Case Report |
+| **Series refinement** | **Done** | Per-crime-type DBSCAN eps in `AppConfig` / `SeriesDetector` + analyst merge/split overrides on Cases page |
+| **Network visualisation** | **Done** | `CoOffendingGraphWidget`: zoom/pan, node click, Load CSV, **Load from DB** (`loadFromDatabase()` via SQLite `meta.person_id`) |
+| **Calibration dashboard** | **Done** | `CalibrationDashboardWidget` on Analytics **Calibration** tab |
+| **Local read-only API** | **Done** | `LocalApiServer` REST endpoints + `test_local_api` |
+| **Narrative upgrade** | Not started | Optional ONNX sentence encoder (feature flag) |
+
+See [REMAINING.md](REMAINING.md) for the full Phase 3–5 backlog.
+
+### Phase 3 — Scale & collaboration (6–12 months)
+
+**Goal:** Support larger jurisdictions and small teams without losing auditability.
+
+| Initiative | Actions | Success criteria |
+|------------|---------|------------------|
+| **Performance** | Parallel ingest, indexed SQLite queries, incremental model refit | 500k events ingest + baseline fit in <5 minutes on workstation |
+| **Multi-jurisdiction** | Zone registry, CRS normalisation, per-force config profiles | UK + US cities in one project without column hacks |
+| **Optional read-only API** | Local REST layer shipped (`LocalApiServer`); gRPC + auth remain future work | External dashboard can query without duplicating logic |
+| **Audit compliance** | Immutable provenance export (signed JSON), retention policies | Export passes internal audit checklist |
+| **GIS integration** | Optional MapLibre or Qt Location tile layer; GeoJSON boundary import | Hotspots overlaid on real street map |
+
+### Phase 4 — Research & policy impact (12–18 months)
+
+**Goal:** Position SENTINEL as an evidence-based alternative to black-box predictive policing tools.
+
+| Initiative | Actions | Success criteria |
+|------------|---------|------------------|
+| **Fairness-by-default** | Pre-deployment bias report required before alerts go live | No zone goes on “high alert” without disparity check |
+| **Published benchmarks** | Open benchmark suite on public data with leaderboards | Third parties can reproduce PAI/ECE numbers |
+| **Academic partnerships** | Publish methods paper; share evaluation scripts | Peer-reviewed validation of Hawkes + ensemble stack |
+| **Policy toolkit** | Exportable “model card” per deployment: data, limits, known failure modes | Usable in governance / ethics review |
+
+### Phase 5 — Optional productisation (18–24 months)
+
+Only pursue if Phases 1–3 validate real user demand.
+
+| Track | Description | Guardrails |
+|-------|-------------|------------|
+| **Agency desktop licence** | Signed builds, support channel, custom ingest adapters | No cloud dependency; data stays on device |
+| **Training mode** | Synthetic scenario generator for academy / university use | Clearly labelled simulated data |
+| **Managed analytics service** | Hosted version for researchers | Strict tenant isolation; full provenance export; no proprietary model lock-in |
+
+### Strategic priorities (ordered)
+
+1. **Trust** — provenance, calibration, and fairness before more models
+2. **Usability** — UI workflows for import, case review, and export
+3. **Evidence** — benchmark harness on real local data splits
+4. **Scale** — performance and multi-city normalisation
+5. **Innovation** — optional ML only where classical methods plateau
+
+### Risks and mitigations
+
+| Risk | Mitigation |
+|------|------------|
+| Biased alerts harm communities | Mandatory `BiasAuditor` gate; configurable thresholds; human-in-the-loop leads |
+| Data quality varies by city | `DataQualityScorer` quarantine; source reliability map; visible quality badges in UI |
+| Co-offending data scarcity | Support agency CSV; derive from case numbers where legal; never assume public PII |
+| Model overconfidence | Ensemble uncertainty + calibration dashboard + explicit “low data” warnings |
+| Scope creep into opaque AI | Keep classical path default; embeddings opt-in with full provenance |
+
+### Metrics that define success
+
+| Metric | Target (12 months) |
+|--------|-------------------|
+| Automated test count | Maintain ≥495; add regression tests per new ingest format |
+| Real-data integration | ≥3 cities + UK + weather on every release |
+| Benchmark reproducibility | Fixed PAI/ECE report from `data/` with published command |
+| Analyst time-to-first-lead | <15 minutes from install to ranked lead on sample data |
+| Provenance coverage | 100% of leads traceable to source row + model + parameters |
 
 ---
 
 ## Architecture
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                        SENTINEL PIPELINE                         â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚                                                                  â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
-â”‚  â”‚  INGEST     â”‚   â”‚  NLP         â”‚   â”‚  FEATURE ENGINEERING  â”‚ â”‚
-â”‚  â”‚             â”‚â”€â”€â–¶â”‚              â”‚â”€â”€â–¶â”‚                       â”‚ â”‚
-â”‚  â”‚ UKPolice    â”‚   â”‚ MOExtractor  â”‚   â”‚ TemporalFeatures      â”‚ â”‚
-â”‚  â”‚ Weather     â”‚   â”‚ CrimeClass.  â”‚   â”‚ DataQualityScorer     â”‚ â”‚
-â”‚  â”‚ CsvImporter â”‚   â”‚              â”‚   â”‚                       â”‚ â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
-â”‚          â”‚                                         â”‚             â”‚
-â”‚          â–¼                                         â–¼             â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
-â”‚  â”‚                   MODEL STACK                            â”‚   â”‚
-â”‚  â”‚  PoissonBaseline  â”‚  HawkesProcess  â”‚  SeriesDetector   â”‚   â”‚
-â”‚  â”‚  KDEHotspot       â”‚  GPRegression   â”‚  BayesianHier.    â”‚   â”‚
-â”‚  â”‚  RiskForecaster   â”‚  EnsemblePredictor â”‚ NearRepeatVict.â”‚   â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
-â”‚          â”‚                                                        â”‚
-â”‚          â–¼                                                        â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
-â”‚  â”‚                   INFERENCE ENGINE                       â”‚   â”‚
-â”‚  â”‚  GeographicProfiler â”‚ MOAnalyser   â”‚ EvidenceScorer     â”‚   â”‚
-â”‚  â”‚  AnomalyDetector    â”‚ CoOffending. â”‚ HintEngine         â”‚   â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
-â”‚          â”‚                                                        â”‚
-â”‚          â–¼                                                        â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
-â”‚  â”‚  DATABASE   â”‚   â”‚  BENCHMARKING  â”‚   â”‚  UI LAYER        â”‚   â”‚
-â”‚  â”‚  SQLite     â”‚   â”‚  BenchMetrics  â”‚   â”‚  Dashboard       â”‚   â”‚
-â”‚  â”‚  Provenance â”‚   â”‚  BiasAuditor   â”‚   â”‚  Map / Events    â”‚   â”‚
-â”‚  â”‚  Audit Log  â”‚   â”‚  Calibration   â”‚   â”‚  Leads / Audit   â”‚   â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
-â”‚                                                                  â”‚
-â”‚  ProvenanceLog traces every event through the entire pipeline    â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────────────────────────────┐
+│                     SENTINEL DESKTOP PIPELINE                    │
+├─────────────────────────────────────────────────────────────────┤
+│  INGEST          NLP              FEATURES                       │
+│  UKPolice        MOExtractor      TemporalFeatures               │
+│  Weather         CrimeClassifier  DataQualityScorer              │
+│  CsvImporter                                                     │
+│       │                │                  │                    │
+│       └────────────────┴──────────────────┘                    │
+│                          ▼                                       │
+│  MODELS: Poisson · Hawkes · Series · KDE · GP · Bayesian ·       │
+│          Ensemble · NearRepeat · RiskForecaster                  │
+│                          ▼                                       │
+│  INFERENCE: GeoProfiler · MOAnalyser · Evidence · Anomaly ·      │
+│             CoOffending · HintEngine · LeadReports               │
+│                          ▼                                       │
+│  SQLite · ProvenanceLog · BenchmarkMetrics · Qt UI               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
----
-
-## Statistical Models
-
-### Poisson Baseline (Negative Binomial variant)
-Non-homogeneous Poisson process with temporal bucket keys `zone|hour|dow|month|crimeType`. Overdispersed zones automatically switch to Negative Binomial parameterisation. Provides PMF, PPF, 90% credible intervals.
-
-### Hawkes Self-Exciting Process
-Conditional intensity: `Î»(t,x) = Î¼ + Î£áµ¢ Î±Â·exp(-Î²(t-táµ¢))Â·G(x-xáµ¢,Ïƒ)` where G is a 2D spatial Gaussian kernel. Fitted via maximum likelihood. Models near-repeat victimisation contagion.
-
-### Spatiotemporal DBSCAN (Series Detector)
-Normalises spatial (km), temporal (days) and MO similarity into a 3D feature space. Applies DBSCAN with calibrated crime-type-specific epsilon values from published near-repeat research.
-
-### Rossmo CGT Geographic Profile
-For distance `d` from grid point to crime site `cáµ¢`, with buffer radius `B`:
-- `d â‰¤ B`: `B^(gâˆ’f) / (2B âˆ’ d)^g` (buffer zone â€” suppresses anchor near crime sites)
-- `B < d < 4B`: `1 / d^f` (distance decay)
-- `d â‰¥ 4B`: negligible
-
-Surface is summed over all crime sites, normalised; 50%/80% search areas computed by thresholding.
-
-### Bayesian Hierarchical Model
-Gamma-Poisson conjugacy: `Î»_z | data ~ Gamma(Î±â‚€+k, Î²â‚€+E)`. Hyperparameters Î±â‚€, Î²â‚€ estimated via empirical Bayes method of moments across zones.
-
-### GP Regression
-Squared-exponential kernel, Cholesky decomposition `K = LLáµ€`, posterior mean `Î¼* = K*áµ€ Î±`, posterior variance `Ïƒ*Â² = K** - K*áµ€ (K+Ïƒâ‚™Â²I)â»Â¹ K*`. Log marginal likelihood for model comparison.
-
-### Calibration Analysis
-ECE (expected calibration error, Guo et al. 2017), MCE (maximum calibration error), ACE (unweighted average), PAVA-based isotonic regression recalibration.
+**Technology:** C++23, Qt 6 (Core, Widgets, Network, Charts, SQL, Test), CMake 3.27+, SQLite, pure C++ statistics (no external ML libraries in the classical path).
 
 ---
 
-## Data Sources
+## Local Data & Testing
 
-| Source | URL | Access | Data |
-|---|---|---|---|
-| UK Police Open Data | `data.police.uk/api` | Free, no key | 43 UK police forces, monthly crime records |
-| Open-Meteo Weather | `api.open-meteo.com` | Free, no key | Hourly historical + forecast weather |
-| CSV Auto-import | Local files | N/A | Chicago PD, NYPD, LAPD, ABS data formats |
-
----
-
-## Project Structure
-
-```
-sentinel/
-â”œâ”€â”€ CMakeLists.txt              # Build configuration
-â”œâ”€â”€ README.md
-â”œâ”€â”€ .gitignore
-â”œâ”€â”€ resources/
-â”‚   â”œâ”€â”€ icons/                  # Application icons
-â”‚   â”œâ”€â”€ styles/dark.qss         # Dark theme stylesheet
-â”‚   â””â”€â”€ sentinel.qrc            # Qt resource file
-â”œâ”€â”€ src/
-â”‚   â”œâ”€â”€ main.cpp
-â”‚   â”œâ”€â”€ core/
-â”‚   â”‚   â”œâ”€â”€ CrimeEvent.h        # All shared data structures
-â”‚   â”‚   â”œâ”€â”€ AppConfig.h         # Runtime configuration + QSettings persistence
-â”‚   â”‚   â”œâ”€â”€ Database.h/cpp      # SQLite persistence, schema versioning
-â”‚   â”‚   â”œâ”€â”€ SentinelLogger.h/cpp # Qt log handler + ring buffer
-â”‚   â”‚   â””â”€â”€ DataExporter.h/cpp  # Markdown/JSON/CSV/HTML export
-â”‚   â”œâ”€â”€ audit/
-â”‚   â”‚   â””â”€â”€ ProvenanceLog.h/cpp # Event provenance chain recording
-â”‚   â”œâ”€â”€ ingest/
-â”‚   â”‚   â”œâ”€â”€ DataSource.h        # Abstract async data source base
-â”‚   â”‚   â”œâ”€â”€ UKPoliceSource.h/cpp # UK Police Open Data API client
-â”‚   â”‚   â”œâ”€â”€ WeatherSource.h/cpp  # Open-Meteo weather API client
-â”‚   â”‚   â”œâ”€â”€ CsvImporter.h/cpp   # Auto-column CSV import
-â”‚   â”‚   â””â”€â”€ DataQualityScorer.h/cpp # Quality scoring
-â”‚   â”œâ”€â”€ nlp/
-â”‚   â”‚   â”œâ”€â”€ MOExtractor.h/cpp   # Modus operandi feature extraction
-â”‚   â”‚   â””â”€â”€ CrimeClassifier.h/cpp # Crime type classification + sentiment
-â”‚   â”œâ”€â”€ models/
-â”‚   â”‚   â”œâ”€â”€ TemporalFeatures.h/cpp # Cyclical temporal feature engineering
-â”‚   â”‚   â”œâ”€â”€ PoissonBaseline.h/cpp  # Poisson/NegBin baseline model
-â”‚   â”‚   â”œâ”€â”€ HawkesProcess.h/cpp    # Self-exciting process
-â”‚   â”‚   â”œâ”€â”€ SeriesDetector.h/cpp   # DBSCAN crime series detection
-â”‚   â”‚   â”œâ”€â”€ KDEHotspot.h/cpp       # Kernel density hotspot estimation
-â”‚   â”‚   â”œâ”€â”€ GPRegression.h/cpp     # Gaussian Process regression
-â”‚   â”‚   â”œâ”€â”€ BayesianHierarchical.h/cpp # Gamma-Poisson hierarchical model
-â”‚   â”‚   â”œâ”€â”€ RiskForecaster.h/cpp   # Multi-day zone risk forecasting
-â”‚   â”‚   â”œâ”€â”€ EnsemblePredictor.h/cpp # Weighted ensemble + calibration
-â”‚   â”‚   â””â”€â”€ NearRepeatVictimisation.h/cpp # Knox test + near-repeat alerts
-â”‚   â”œâ”€â”€ inference/
-â”‚   â”‚   â”œâ”€â”€ GeographicProfiler.h/cpp # Rossmo CGT surface
-â”‚   â”‚   â”œâ”€â”€ MOAnalyser.h/cpp       # TF-IDF cosine MO similarity
-â”‚   â”‚   â”œâ”€â”€ EvidenceScorer.h/cpp   # Bayesian likelihood ratio evidence
-â”‚   â”‚   â”œâ”€â”€ AnomalyDetector.h/cpp  # Isolation + z-score anomaly detection
-â”‚   â”‚   â”œâ”€â”€ CoOffendingAnalyser.h/cpp # PageRank + betweenness co-offender network
-â”‚   â”‚   â”œâ”€â”€ HintEngine.h/cpp       # Lead generation + ranking + contradiction
-â”‚   â”‚   â””â”€â”€ LeadReportGenerator.h/cpp # Markdown/HTML lead reports
-â”‚   â”œâ”€â”€ benchmark/
-â”‚   â”‚   â”œâ”€â”€ BenchmarkMetrics.h/cpp # PAI, PEI, SER, AUC, MAE, RMSE, Brier, MRR
-â”‚   â”‚   â”œâ”€â”€ BiasAuditor.h/cpp      # Fairness metrics and bias detection
-â”‚   â”‚   â””â”€â”€ CalibrationAnalyser.h/cpp # ECE, MCE, ACE, isotonic calibration
-â”‚   â””â”€â”€ ui/
-â”‚       â”œâ”€â”€ MainWindow.h/cpp
-â”‚       â”œâ”€â”€ DashboardWidget.h/cpp
-â”‚       â”œâ”€â”€ MapWidget.h/cpp
-â”‚       â”œâ”€â”€ EventsTableWidget.h/cpp
-â”‚       â”œâ”€â”€ LeadsWidget.h/cpp
-â”‚       â”œâ”€â”€ AnalyticsWidget.h/cpp
-â”‚       â”œâ”€â”€ TemporalHeatmapWidget.h/cpp
-â”‚       â”œâ”€â”€ AuditLogWidget.h/cpp
-â”‚       â”œâ”€â”€ DebugConsoleWidget.h/cpp
-â”‚       â””â”€â”€ SettingsWidget.h/cpp
-â””â”€â”€ tests/
-    â”œâ”€â”€ CMakeLists.txt          # 393 test targets
-    â””â”€â”€ test_*.cpp              # Unit, integration, stress, and UI tests
+```powershell
+# One command: fetch (if needed) + build + run real-data tests
+& scripts/run_real_data_tests.ps1
 ```
 
+```bash
+# Or manually
+& data/scripts/fetch_datasets.ps1
+cmake --build build --target test_local_datasets test_real_data_evaluation
+ctest -R "test_local_datasets|test_real_data_evaluation" -V
+```
+
+See [docs/REAL_DATA_EVALUATION.md](docs/REAL_DATA_EVALUATION.md) for measured PAI, quality scores, and per-dataset results.
+
+```bash
+# Full suite (495 tests, ~40s parallel)
+cd build && ctest --output-on-failure -j4
+```
+
+Dataset details: [`data/README.md`](data/README.md)
+
 ---
 
-## Building
+## Building & Running
 
 ### Prerequisites
 
 | Requirement | Version |
-|---|---|
+|-------------|---------|
 | Qt | 6.4+ (Core, Widgets, Network, Charts, Sql, Test) |
 | CMake | 3.27+ |
-| C++ Compiler | C++23: MSVC 2022, GCC 13+, or Clang 16+ |
-| Ninja (optional) | Fastest build on Windows |
+| Compiler | C++23 (GCC 13+, MSVC 2022, Clang 16+) |
 
-### Windows â€” MinGW (Recommended)
+### Windows — primary packaging path
+
+**Primary build-and-package command:** `deploy_portable.ps1` (MinGW or MSVC; no Windows SDK required for MinGW).
+
+```powershell
+cd sentinel
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release `
+  -DCMAKE_PREFIX_PATH="C:/Qt/6.11.0/mingw_64"
+cmake --build build --target sentinel
+& packaging/windows/deploy_portable.ps1 -BuildDir build
+packaging/pkg/bin/sentinel.exe   # smoke-test staged tree
+```
+
+Artifacts land in `dist/` (`SENTINEL-1.0.0-win64-portable.zip`, `SENTINEL-1.0.0-win64-setup.exe` when NSIS is installed).
+
+### Windows (MSVC — requires Windows 11 SDK)
+
+MSVC builds need the **Windows 11 SDK** (`stddef.h`, UCRT). Install via `& packaging/windows/install_windows_sdk.ps1` or Visual Studio Installer → *Desktop development with C++* → Windows 11 SDK.
+
+Requires Qt 6 with the **MSVC 2022 64-bit** kit (e.g. `C:/Qt/6.11.0/msvc2022_64`). Open a **Developer Command Prompt for VS 2022** so `cl.exe` is on `PATH`.
+
+```powershell
+cd sentinel
+& packaging/windows/build_release.ps1
+# Or: & packaging/windows/build_msvc.bat
+```
+
+If MSVC is unavailable, use MinGW + `deploy_portable.ps1` instead (see Windows row in Releases table below).
+
+CI on GitHub Actions uses **MinGW + Ninja** (Qt 6.6.0 via aqtinstall) on `windows-latest` and **clang** on `ubuntu-latest` — see `.github/workflows/ci.yml`.
+
+### Linux
 
 ```bash
 cd sentinel
-cmake -B build -G Ninja -DCMAKE_PREFIX_PATH="C:/Qt/6.11.0/mingw_64"
+cmake -B build -G Ninja -DCMAKE_PREFIX_PATH=/usr
 cmake --build build
-```
-
-### Windows â€” MSVC
-
-```bash
-cmake -B build -DCMAKE_PREFIX_PATH="C:/Qt/6.11.0/msvc2022_64"
-cmake --build build --config Release
-```
-
-### Linux / macOS
-
-```bash
-cmake -B build -DCMAKE_PREFIX_PATH=/path/to/Qt/6.x.x/gcc_64
-cmake --build build -j$(nproc)
-```
-
-### Running
-
-```bash
-# Windows MinGW
-./build/sentinel.exe
-
-# Linux/macOS
 ./build/sentinel
 ```
 
----
-
-## Testing
-
-SENTINEL has **393 test targets** covering every pipeline stage. Tests are written with Qt Test and run via CTest.
+### Headless UI tests
 
 ```bash
-# Run all tests (parallel, 4 jobs)
-cd build
-ctest --output-on-failure -j4
-
-# Run a specific test
-ctest -R test_poisson_statistical --output-on-failure
-
-# List all tests
-ctest -N
+set QT_QPA_PLATFORM=offscreen
+ctest -R test_ui -j4
 ```
-
-### Test Coverage by Layer
-
-| Layer | Test Files | Coverage |
-|---|---|---|
-| Core / Database | `test_database_*`, `test_crime_event_*` | Schema versioning, CRUD, migration, stress |
-| Ingest | `test_csv_*`, `test_uk_police_*`, `test_data_quality_*` | CSV parsing, API JSON, quality scoring |
-| NLP | `test_mo_extractor_*`, `test_crime_classifier_*` | Entry methods, weapons, severity, sentiment |
-| Models | `test_poisson_*`, `test_hawkes_*`, `test_series_*`, `test_kde_*`, `test_gp_*`, `test_bayesian_*`, `test_risk_*`, `test_ensemble_*`, `test_near_repeat_*` | PMF/PPF, intensity, surface, grid, posterior, Knox ratio |
-| Inference | `test_geographic_*`, `test_mo_analyser_*`, `test_evidence_*`, `test_anomaly_*`, `test_cooffending_*`, `test_hint_*` | CGT surface, TF-IDF, Bayesian LR, PageRank |
-| Benchmarking | `test_benchmark_*`, `test_calibration_*`, `test_bias_*` | PAI, AUC, ECE, fairness metrics |
-| UI (headless) | `test_*_widget*`, `test_audit_log_*`, `test_settings_*` | Qt offscreen, signal/slot, model data |
-| Integration | `test_pipeline_*`, `test_full_*`, `test_e2e_*` | End-to-end with 1000+ events |
-
-### Test execution time
-
-The full suite completes in under **40 seconds** on a modern CPU (stress + network tests run in parallel).
 
 ---
 
-## Configuration
+## Releases & Installation
 
-Settings are persisted via `QSettings` (INI format on Windows at `%APPDATA%/SENTINEL/`).
+SENTINEL **v1.0.0** ships as native packages with sample datasets and documentation bundled.
 
-### Key Parameters
+| Platform | Primary build command | Artifacts (`dist/`) |
+|----------|----------------------|---------------------|
+| **Windows** | `& packaging/windows/deploy_portable.ps1 -BuildDir build` | `SENTINEL-1.0.0-win64-portable.zip`, `SENTINEL-1.0.0-win64-setup.exe` |
+| **Windows (MSVC + SDK)** | `& packaging/windows/build_release.ps1` | `SENTINEL-1.0.0-win64-portable.zip`; `deploy_portable.ps1` also produces setup.exe |
+| **Linux** | `QT_PREFIX=/usr ./packaging/linux/build_release.sh` | `SENTINEL-1.0.0-linux-x86_64.tar.gz`, optional `sentinel_1.0.0_amd64.deb` |
 
-```ini
-[pipeline]
-hawkesHistoryDays=365
-seriesMinEvents=3
-seriesEpsKm=0.3
-seriesEpsDays=14.0
-qualityThreshold=0.3
-forecastHorizonDays=7
+**Staged smoke-test tree:** `packaging/pkg/bin/sentinel.exe` — must include `Qt6Core.dll` and `platforms/qwindows.dll`. Do **not** distribute CPack `SENTINEL-*-win64.exe` (stub without Qt DLLs).
 
-[alerts]
-alertElevated=0.30
-alertHigh=0.50
-alertCritical=0.75
+**Windows SDK missing?** Use MinGW + `deploy_portable.ps1`, or run `& packaging/windows/install_windows_sdk.ps1` before MSVC release builds.
 
-[gp]
-gpSigma2=1.0
-gpLengthscale=0.5
-gpNoiseSigma2=0.1
+**Analyst quick start:** **[docs/ANALYST_GUIDE.md](docs/ANALYST_GUIDE.md)** — portable ZIP or setup.exe, import sample CSVs, review leads, export reports.
 
-[ensemble]
-ensemblePoissonWeight=0.5
-ensembleHawkesWeight=0.5
+End-user guide (portable vs setup.exe): **[docs/RELEASE.md](docs/RELEASE.md)**
 
-[ui]
-mapZoomLevel=14
-maxLeadCount=50
-theme=dark
-```
+Remaining work (Phases 3–5): **[REMAINING.md](REMAINING.md)** · Full roadmap: **[docs/ROADMAP.md](docs/ROADMAP.md)**
 
 ---
 
 ## Design Principles
 
-### 1. Auditability First
-Every output â€” prediction, lead, anomaly signal â€” carries a full provenance chain: data source â†’ ingest time â†’ model â†’ parameters â†’ output. The `ProvenanceLog` records every stage for every event.
-
-### 2. Uncertainty as a First-Class Output
-No point estimates without confidence intervals. All probabilistic outputs include:
-- 90%/95% credible intervals (Bayesian models)
-- Aleatoric + epistemic uncertainty decomposition (EnsemblePredictor)
-- Calibration curves and ECE scores
-
-### 3. No Black-Box AI
-Every algorithm is an open, peer-reviewed statistical method implemented in pure C++. Every weight, kernel, and threshold is inspectable, configurable, and documented.
-
-### 4. Fairness by Design
-The `BiasAuditor` computes disparate impact ratios, equal opportunity differences, and feedback loop risk scores. Alert thresholds are configurable to prevent systematic over-flagging of any demographic or geographic group.
-
-### 5. Reproducibility
-All pipelines are deterministic given the same input data and configuration. No hidden randomness.
+1. **Auditability first** — every prediction and lead carries a provenance chain.
+2. **Uncertainty is output** — credible intervals, calibration, and ensemble decomposition, not point estimates alone.
+3. **No black boxes** — classical algorithms in readable C++; optional ML only behind explicit flags.
+4. **Fairness by design** — bias metrics and configurable thresholds before alerts propagate.
+5. **Reproducibility** — deterministic pipelines given fixed data and configuration.
 
 ---
 
-## Academic References
-
-| Method | Reference |
-|---|---|
-| Hawkes self-exciting process | Mohler et al. (2011). *Self-exciting point process modeling of crime.* JASA 106(493):100â€“108 |
-| Near-repeat victimisation | Sherman et al. (1989). *Hot spots of predatory crime.* Criminology 27(1):27â€“56 |
-| Near-repeat space-time risk | Johnson et al. (2007). *Space-time patterns of risk.* British Journal of Criminology 47(3):363â€“383 |
-| Geographic profiling (Rossmo CGT) | Rossmo, D.K. (2000). *Geographic Profiling.* CRC Press |
-| Bayesian evidence weighting | Taroni et al. (2014). *Bayesian Networks for Probabilistic Inference and Decision Analysis in Forensic Science.* Wiley |
-| Co-offending networks (PageRank) | Page et al. (1999). *The PageRank Citation Ranking.* Stanford Tech Report |
-| Betweenness centrality | Brandes (2001). *A faster algorithm for betweenness centrality.* Journal of Mathematical Sociology 25(2):163â€“177 |
-| Hierarchical Bayesian crime rates | Gelman & Hill (2007). *Data Analysis Using Regression and Multilevel/Hierarchical Models.* Cambridge |
-| KDE spatial hotspots | Chainey & Ratcliffe (2005). *GIS and Crime Mapping.* Wiley |
-| Calibration (ECE) | Guo et al. (2017). *On calibration of modern neural networks.* ICML |
-| Isotonic regression | Niculescu-Mizil & Caruana (2005). *Predicting good probabilities with supervised learning.* ICML |
-
----
-
-## Technology Stack
-
-| Layer | Technology |
-|---|---|
-| Language | C++23 |
-| UI Framework | Qt 6 (Widgets, Charts, Network, SQL) |
-| Database | SQLite (in-memory for tests, file-backed for production) |
-| Build System | CMake 3.27+ with Ninja |
-| HTTP Client | Qt `QNetworkAccessManager` |
-| NLP | Rule-based (`std::regex`) |
-| Statistics | Pure C++ implementations (no external ML libraries) |
-| Testing | Qt Test, CTest, `QSignalSpy`, offscreen Qt platform |
-
----
-
-*Author: Odin Loch Â· Version 1.0.0 Â· C++23 Qt6 implementation of the SENTINEL design specification*
-
+*SENTINEL — transparent crime analytics for investigators, researchers, and accountable deployment.*

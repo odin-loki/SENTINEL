@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=SENTINEL
+GenericName=Crime Analytics
+Comment=Transparent crime analytics and investigative decision support
+Exec=sentinel
+Icon=sentinel
+Terminal=false
+Type=Application
+Categories=Office;Science;Education;
+Keywords=crime;analytics;investigation;police;forensics;

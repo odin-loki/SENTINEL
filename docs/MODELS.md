@@ -1,4 +1,4 @@
-# SENTINEL ? Statistical Models Reference
+# SENTINEL — Statistical Models Reference
 
 Nine statistical models in the model stack, plus `TemporalFeatures` for feature engineering.
 
@@ -20,8 +20,8 @@ Non-homogeneous Poisson process with historical rates per bucket key `zone|hour|
 ### Key Output: `PoissonPrediction`
 ```cpp
 struct PoissonPrediction {
-    double lambda;                        // ? (expected count per window)
-    double probAtLeastOne;                // P(X ? 1) = 1 - exp(-?)
+    double lambda;                        // — (expected count per window)
+    double probAtLeastOne;                // P(X — 1) = 1 - exp(-?)
     double expectedCount;                 // E[N]
     std::pair<double,double> ci90;        // (5th, 95th) percentile on count
     int    nObservations;                 // number of training windows
@@ -41,7 +41,7 @@ Model the self-exciting (contagion) nature of crime: after a crime occurs, the p
 ### Method
 Hawkes conditional intensity:
 ```
-?(t, x) = ? + ??:t?<t  ? · exp(-?(t - t?)) · G(x - x?, ?)
+?(t, x) = — + ??:t?<t  — · exp(-?(t - t?)) · G(x - x?, ?)
 ```
 where:
 - `?` = background intensity
@@ -51,7 +51,7 @@ where:
 
 **Triggering kernel** (used in MLE):
 ```
-?(?t, ?x) = ? · ? · exp(??·?t) · ?² / (??x?² + ?²)
+?(?t, ?x) = — · — · exp(??·?t) · ?² / (??x?² + ?²)
 ```
 
 **Fitting**: Coordinate-descent with golden-section line search over `(?, ?, ?, ?)`.
@@ -74,7 +74,7 @@ struct HawkesParams {
 **File**: `src/models/SeriesDetector.h/cpp`
 
 ### Purpose
-Identify crime series ? clusters of events likely committed by the same offender(s).
+Identify crime series — clusters of events likely committed by the same offender(s).
 
 ### Method
 1. Compute pairwise distances in a 3D normalised space: `(spatial_km, temporal_days, mo_dissimilarity)`
@@ -89,7 +89,7 @@ Identify crime series ? clusters of events likely committed by the same offender
 struct SeriesMatch {
     QString seriesId;            // cluster identifier
     int     memberCount;         // events in this cluster
-    double  linkProbability;     // [0,1] ? logistic(compositeScore)
+    double  linkProbability;     // [0,1] — logistic(compositeScore)
     double  spatialDistanceM;    // metres from query event
     double  temporalDistanceDays;
     double  moSimilarity;        // Jaccard [0,1]
@@ -114,11 +114,11 @@ f(x,y) = (1/n) ?? K_h(x-x?, y-y?)
 ```
 where `K_h` is a bivariate Gaussian with bandwidth `h`.
 
-**Bandwidth**: Silverman's rule of thumb `h = 1.06 · ? · n^(-1/5)`, or user-specified via `bandwidthMultiplier`.
+**Bandwidth**: Silverman's rule of thumb `h = 1.06 · — · n^(-1/5)`, or user-specified via `bandwidthMultiplier`.
 
 **Hotspot extraction**: Greedy peak selection with non-maximum suppression, ranked by density.
 
-**PAI (Predictive Accuracy Index)**: `PAI = (n_cap/n_total) / (a_cap/a_total)` ? higher is better.
+**PAI (Predictive Accuracy Index)**: `PAI = (n_cap/n_total) / (a_cap/a_total)` — higher is better.
 
 ### Key Output: `HotspotRegion`
 ```cpp
@@ -151,11 +151,11 @@ k(x, x') = ?² · exp(-||x-x'||² / (2l²))
 
 **Prediction**:
 ```
-?* = K*? ?         (posterior mean)
+?* = K*? —         (posterior mean)
 ?*² = K** - K*? v  (posterior variance)
 ```
 
-**Model selection**: Log marginal likelihood `log p(y|X) = -½ y?? - ? log L?? - n/2 log 2?`
+**Model selection**: Log marginal likelihood `log p(y|X) = -½ y?? - — log L?? - n/2 log 2?`
 
 ### Key Output
 ```cpp
@@ -171,13 +171,13 @@ double logMarginalLikelihood();
 **File**: `src/models/BayesianHierarchical.h/cpp`
 
 ### Purpose
-Estimate zone-specific crime rates with partial pooling across zones ? borrowing statistical strength from similar zones.
+Estimate zone-specific crime rates with partial pooling across zones — borrowing statistical strength from similar zones.
 
 ### Method
 Gamma-Poisson conjugate hierarchy:
 ```
 Y_z | ?_z ~ Poisson(?_z · E_z)
-?_z | ?, ? ~ Gamma(?, ?)
+?_z | ?, — ~ Gamma(?, ?)
 ```
 
 **Empirical Bayes**: hyperparameters `(??, ??)` estimated from observed zone rates:
@@ -259,7 +259,7 @@ Combine Poisson and Hawkes predictions into a single calibrated forecast with un
 2. Post-hoc calibration via isotonic regression (binned linear interpolation)
 3. Uncertainty decomposition:
    - **Aleatoric**: Poisson 90% CI width / 3.29 (irreducible randomness)
-   - **Epistemic**: |p_poisson ? p_hawkes| / 2 (model disagreement)
+   - **Epistemic**: |p_poisson — p_hawkes| / 2 (model disagreement)
    - **Combined**: `?_total = sqrt(aleatoric² + epistemic²)`
 
 ### Key Output: `EnsemblePrediction`
@@ -285,7 +285,7 @@ struct EnsemblePrediction {
 **File**: `src/models/NearRepeatVictimisation.h/cpp`
 
 ### Purpose
-Detect space-time near-repeat victimisation patterns ? pairs of crimes occurring close in space and time beyond what independence would predict. Generates proximity-weighted alerts for follow-up incidents.
+Detect space-time near-repeat victimisation patterns — pairs of crimes occurring close in space and time beyond what independence would predict. Generates proximity-weighted alerts for follow-up incidents.
 
 ### Method
 For each ordered pair of events `(prior, current)` with `prior` occurring before `current`:
@@ -296,12 +296,12 @@ For each ordered pair of events `(prior, current)` with `prior` occurring before
 
 **Spatial decay kernel** (linear, within bandwidth `b` metres):
 ```
-S(d) = max(0, 1 ? d/b)
+S(d) = max(0, 1 — d/b)
 ```
 
 **Temporal decay kernel** (linear, within window `w` days):
 ```
-T(?t) = max(0, 1 ? ?t/w)
+T(?t) = max(0, 1 — ?t/w)
 ```
 
 **Alert score**:
@@ -316,10 +316,10 @@ Ratio of observed to expected near pairs under spatial-temporal independence:
 Knox = N_near / E_near
 ```
 where:
-- `N_near` = count of pairs with `d ? bandwidthM` and `?t ? windowDays`
+- `N_near` = count of pairs with `d — bandwidthM` and `?t — windowDays`
 - `E_near = C(n,2) · p_space · p_time`
-- `p_space = min(1, ?·b² / A)` ? near-area fraction of study region `A`
-- `p_time = min(1, w / T_span)` ? near-time fraction of observation span
+- `p_space = min(1, ?·b² / A)` — near-area fraction of study region `A`
+- `p_time = min(1, w / T_span)` — near-time fraction of observation span
 
 Values **> 1.0** indicate significant space-time clustering beyond chance.
 
@@ -335,8 +335,8 @@ struct NearRepeatAlert {
 ```
 
 ### References
-- Sherman, L.W., Gartin, P.R., & Buerger, M.E. (1989). *Hot spots of predatory crime.* Criminology 27(1):27?56.
-- Johnson, S.D. et al. (2007). *Space-time patterns of risk.* British Journal of Criminology 47(3):363?383.
+- Sherman, L.W., Gartin, P.R., & Buerger, M.E. (1989). *Hot spots of predatory crime.* Criminology 27(1):27–56.
+- Johnson, S.D. et al. (2007). *Space-time patterns of risk.* British Journal of Criminology 47(3):363–383.
 
 ---
 
@@ -344,7 +344,7 @@ struct NearRepeatAlert {
 
 **File**: `src/models/TemporalFeatures.h/cpp`
 
-Not counted in the nine-model stack ? lives in the feature-engineering layer but feeds `RiskForecaster` and other models.
+Not counted in the nine-model stack — lives in the feature-engineering layer but feeds `RiskForecaster` and other models.
 
 ### Purpose
 Convert raw timestamps into a feature vector suitable for statistical models.
@@ -359,7 +359,7 @@ Convert raw timestamps into a feature vector suitable for statistical models.
 | Lunar phase | `fmod(days_since_2000-01-06, 29.53) / 29.53` (0=new, 0.5=full) |
 | Sun altitude | Approximate altitude at latitude 51.5°N |
 | Weekend flag | Binary |
-| Night flag | Binary (22:00?05:59) |
+| Night flag | Binary (22:00–05:59) |
 | Public holiday | Binary |
 | Payday proximity | Days to nearest fortnightly payday |
 | Week of month | Integer week index |
@@ -378,8 +378,8 @@ See `docs/DATA_STRUCTURES.md` for full field listing.
 - **ECE** (Expected Calibration Error): `?_b (|b| / n) · |acc(b) - conf(b)|`
 - **MCE** (Maximum Calibration Error): `max_b |acc(b) - conf(b)|`
 - **ACE** (Average Calibration Error): `(1/B) ?_b |acc(b) - conf(b)|`
-- **Brier Score**: `(1/n) ? (p?? - y?)²`
-- **Log Loss**: `-(1/n) ? [y? log(p??) + (1-y?) log(1-p??)]`
+- **Brier Score**: `(1/n) — (p?? - y?)²`
+- **Log Loss**: `-(1/n) — [y? log(p??) + (1-y?) log(1-p??)]`
 
 ### Recalibration
 Isotonic regression (PAVA algorithm) fitted to `(predicted_prob, observed_outcome)` pairs. Monotonicity constraint enforced post-fit.

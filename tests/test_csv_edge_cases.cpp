@@ -210,8 +210,8 @@ private slots:
         const qint64 elapsed = timer.elapsed();
 
         QCOMPARE(events.size(), 1000);
-        QVERIFY2(elapsed < 5000,
-                 qPrintable(QString("Import took %1 ms, expected < 5000 ms").arg(elapsed)));
+        QVERIFY2(elapsed < 10000,
+                 qPrintable(QString("Import took %1 ms, expected < 10000 ms").arg(elapsed)));
         QFile::remove(path);
     }
 

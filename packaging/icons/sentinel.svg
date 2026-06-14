@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SENTINEL">
+  <defs>
+    <linearGradient id="shield" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e88e5"/>
+      <stop offset="100%" stop-color="#0d47a1"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#shield)" d="M32 4 L54 14 V30 C54 44 44 54 32 60 C20 54 10 44 10 30 V14 Z"/>
+  <path fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"
+        d="M22 30 L30 38 L44 22"/>
+  <text x="32" y="18" text-anchor="middle" font-family="Segoe UI, sans-serif"
+        font-size="9" font-weight="700" fill="#ffffff">S</text>
+</svg>

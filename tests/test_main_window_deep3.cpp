@@ -95,8 +95,8 @@ private slots:
         QVERIFY(nav != nullptr);
         QVERIFY(stack != nullptr);
 
-        QCOMPARE(nav->count(), 7);
-        QCOMPARE(stack->count(), 7);
+        QCOMPARE(nav->count(), 9);
+        QCOMPARE(stack->count(), 9);
         QVERIFY(nav->count() == stack->count());
     }
 

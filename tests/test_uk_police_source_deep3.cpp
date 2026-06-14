@@ -10,16 +10,7 @@
 #include <cmath>
 
 #include "core/CrimeEvent.h"
-#ifdef __GNUC__
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wkeyword-macro"
-#endif
-#define private public
 #include "ingest/UKPoliceSource.h"
-#undef private
-#ifdef __GNUC__
-#  pragma GCC diagnostic pop
-#endif
 
 class FakeNetworkReply : public QNetworkReply
 {

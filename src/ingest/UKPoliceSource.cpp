@@ -189,7 +189,6 @@ CrimeEvent UKPoliceSource::parseRawEvent(const QJsonObject& raw) const
         ev.narrative = context;
     }
 
-    ev.qualityScore = 0.5;
     return ev;
 }
 

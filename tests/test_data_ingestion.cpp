@@ -26,25 +26,9 @@
 
 #include "core/CrimeEvent.h"
 #include "ingest/DataQualityScorer.h"
-#include "ingest/DataSource.h"   // include transitively-needed base before the define
-
-// ─── White-box test access ───────────────────────────────────────────────────
-// Redefine `private` → `public` so we can call parseRawEvent on UKPoliceSource
-// and onReplyFinished/m_cache on WeatherSource without modifying source files.
-// This technique does NOT alter the compiled binary: access specifiers have no
-// effect on object layout or vtable entries.  The #pragma silences the GCC/Clang
-// keyword-macro diagnostic that might fire with -pedantic builds.
-#ifdef __GNUC__
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wkeyword-macro"
-#endif
-#define private public
-#include "ingest/UKPoliceSource.h"   // exposes parseRawEvent, BASE_URL
-#include "ingest/WeatherSource.h"    // exposes onReplyFinished, m_cache
-#undef private
-#ifdef __GNUC__
-#  pragma GCC diagnostic pop
-#endif
+#include "ingest/DataSource.h"
+#include "ingest/UKPoliceSource.h"
+#include "ingest/WeatherSource.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FakeNetworkReply

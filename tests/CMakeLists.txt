@@ -2,10 +2,108 @@ cmake_minimum_required(VERSION 3.27)
 
 find_package(Qt6 REQUIRED COMPONENTS Test Concurrent)
 
+# ─── Cross-platform CTest environment (Qt plugins / offscreen) ───────────────
+function(sentinel_compute_test_environment OUT_VAR)
+    if(WIN32 AND MSVC)
+        set(_path_parts "")
+        foreach(_prefix IN LISTS CMAKE_PREFIX_PATH)
+            if(EXISTS "${_prefix}/bin")
+                list(APPEND _path_parts "${_prefix}/bin")
+            endif()
+        endforeach()
+        if(_path_parts)
+            list(REMOVE_DUPLICATES _path_parts)
+        endif()
+
+        set(_qt_plugin_path "")
+        if(DEFINED ENV{QT_PLUGIN_PATH} AND NOT "$ENV{QT_PLUGIN_PATH}" STREQUAL "")
+            set(_qt_plugin_path "$ENV{QT_PLUGIN_PATH}")
+        else()
+            foreach(_prefix IN LISTS CMAKE_PREFIX_PATH)
+                if(EXISTS "${_prefix}/plugins")
+                    set(_qt_plugin_path "${_prefix}/plugins")
+                    break()
+                endif()
+            endforeach()
+        endif()
+
+        set(_env "")
+        if(_path_parts)
+            string(JOIN ";" _path_joined "${_path_parts}")
+            set(_env "PATH=${_path_joined}")
+        endif()
+        if(_qt_plugin_path)
+            if(_env)
+                string(APPEND _env ";QT_PLUGIN_PATH=${_qt_plugin_path}")
+            else()
+                set(_env "QT_PLUGIN_PATH=${_qt_plugin_path}")
+            endif()
+        endif()
+        if(_env)
+            string(APPEND _env ";QT_QPA_PLATFORM=offscreen")
+        else()
+            set(_env "QT_QPA_PLATFORM=offscreen")
+        endif()
+    elseif(WIN32)
+        set(_path_parts "")
+        get_target_property(_qt_core_loc Qt6::Core IMPORTED_LOCATION_RELEASE)
+        if(NOT _qt_core_loc)
+            get_target_property(_qt_core_loc Qt6::Core IMPORTED_LOCATION)
+        endif()
+        if(_qt_core_loc)
+            get_filename_component(_qt_bin_dir "${_qt_core_loc}" DIRECTORY)
+            list(APPEND _path_parts "${_qt_bin_dir}")
+        endif()
+        foreach(_prefix IN LISTS CMAKE_PREFIX_PATH)
+            if(EXISTS "${_prefix}/bin")
+                list(APPEND _path_parts "${_prefix}/bin")
+            endif()
+        endforeach()
+        if(CMAKE_CXX_COMPILER)
+            get_filename_component(_compiler_bin "${CMAKE_CXX_COMPILER}" DIRECTORY)
+            if(_compiler_bin)
+                list(APPEND _path_parts "${_compiler_bin}")
+            endif()
+        endif()
+        if(_path_parts)
+            list(REMOVE_DUPLICATES _path_parts)
+        endif()
+
+        set(_qt_plugin_path "")
+        if(DEFINED ENV{QT_PLUGIN_PATH} AND NOT "$ENV{QT_PLUGIN_PATH}" STREQUAL "")
+            set(_qt_plugin_path "$ENV{QT_PLUGIN_PATH}")
+        else()
+            foreach(_prefix IN LISTS CMAKE_PREFIX_PATH)
+                if(EXISTS "${_prefix}/plugins")
+                    set(_qt_plugin_path "${_prefix}/plugins")
+                    break()
+                endif()
+            endforeach()
+            if(NOT _qt_plugin_path AND _qt_bin_dir)
+                set(_qt_plugin_path "${_qt_bin_dir}/../plugins")
+            endif()
+        endif()
+
+        string(JOIN ";" _path_joined "${_path_parts}")
+        set(_env "PATH=${_path_joined}")
+        if(_qt_plugin_path)
+            string(APPEND _env ";QT_PLUGIN_PATH=${_qt_plugin_path}")
+        endif()
+        string(APPEND _env ";QT_QPA_PLATFORM=offscreen")
+    else()
+        set(_env "QT_QPA_PLATFORM=offscreen")
+    endif()
+    set(${OUT_VAR} "${_env}" PARENT_SCOPE)
+endfunction()
+
+sentinel_compute_test_environment(SENTINEL_TEST_ENV)
+set(SENTINEL_TEST_ENV_HEADLESS "SENTINEL_HEADLESS_TEST=1;${SENTINEL_TEST_ENV}")
+
 # ─── Helper: add a test executable that links all sentinel source libs ───────
 macro(sentinel_test TARGET)
     qt_add_executable(${TARGET} ${ARGN})
     target_include_directories(${TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    target_compile_definitions(${TARGET} PRIVATE SENTINEL_TESTING)
     target_link_libraries(${TARGET} PRIVATE
         sentinel_core
         Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets
@@ -13,20 +111,39 @@ macro(sentinel_test TARGET)
     add_test(NAME ${TARGET} COMMAND ${TARGET})
     set_tests_properties(${TARGET} PROPERTIES
         TIMEOUT 120
-        ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+        ENVIRONMENT "${SENTINEL_TEST_ENV}"
     )
 endmacro()
 
 sentinel_test(test_core_nlp     test_core_nlp.cpp)
 sentinel_test(test_models       test_models.cpp)
 sentinel_test(test_inference    test_inference.cpp)
-sentinel_test(test_integration  test_integration.cpp)
+sentinel_test(test_integration  test_integration.cpp test_update_checker.cpp)
+add_test(NAME test_update_checker COMMAND test_integration TestUpdateChecker)
+set_tests_properties(test_update_checker PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
+)
 sentinel_test(test_quality_and_data test_quality_and_data.cpp)
 
 # Copy test data to build dir so tests can locate it via applicationDirPath()
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/data/weather)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/data/london_crimes_2024.csv
                ${CMAKE_CURRENT_BINARY_DIR}/data/london_crimes_2024.csv
                COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/data/weather/london_2024_h1.json
+               ${CMAKE_CURRENT_BINARY_DIR}/data/weather/london_2024_h1.json
+               COPYONLY)
+sentinel_test(test_ingest_enrichment test_ingest_enrichment.cpp)
+set_tests_properties(test_ingest_enrichment PROPERTIES
+    TIMEOUT 60
+    ENVIRONMENT "SENTINEL_DATA_DIR=${CMAKE_SOURCE_DIR}/data;${SENTINEL_TEST_ENV}"
+)
+sentinel_test(test_local_api test_local_api.cpp)
+set_tests_properties(test_local_api PROPERTIES
+    TIMEOUT 30
+    ENVIRONMENT "${SENTINEL_TEST_ENV_HEADLESS}"
+)
 sentinel_test(test_provenance   test_provenance.cpp)
 
 # UI automation test — needs QApplication and the full UI source tree
@@ -39,9 +156,13 @@ qt_add_executable(test_ui_automation
     ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
     ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
 )
 target_include_directories(test_ui_automation PRIVATE
@@ -54,7 +175,7 @@ target_link_libraries(test_ui_automation PRIVATE
 add_test(NAME test_ui_automation COMMAND test_ui_automation -platform offscreen)
 set_tests_properties(test_ui_automation PROPERTIES
     TIMEOUT 60
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
     LABELS "ui"
 )
 sentinel_test(test_benchmark         test_benchmark.cpp)
@@ -69,7 +190,7 @@ target_link_libraries(test_performance PRIVATE
 add_test(NAME test_performance COMMAND test_performance)
 set_tests_properties(test_performance PROPERTIES
     TIMEOUT 300
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 sentinel_test(test_kde_hotspot       test_kde_hotspot.cpp)
 sentinel_test(test_risk_forecaster   test_risk_forecaster.cpp)
@@ -84,7 +205,7 @@ target_link_libraries(test_network_stress PRIVATE
 add_test(NAME test_network_stress COMMAND test_network_stress)
 set_tests_properties(test_network_stress PROPERTIES
     TIMEOUT 240
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 sentinel_test(test_gp_ensemble_integration test_gp_ensemble_integration.cpp)
 sentinel_test(test_nlp_pipeline       test_nlp_pipeline.cpp)
@@ -110,7 +231,7 @@ target_link_libraries(test_performance_suite PRIVATE
 add_test(NAME test_performance_suite COMMAND test_performance_suite)
 set_tests_properties(test_performance_suite PROPERTIES
     TIMEOUT 600
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 sentinel_test(test_app_config              test_app_config.cpp)
 sentinel_test(test_settings_persistence    test_settings_persistence.cpp)
@@ -373,7 +494,7 @@ add_test(NAME test_leads_widget_interaction COMMAND test_leads_widget_interactio
 set_tests_properties(test_leads_widget_interaction PROPERTIES
     TIMEOUT 120
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 sentinel_test(test_all_models_perf     test_all_models_perf.cpp)
 set_tests_properties(test_all_models_perf PROPERTIES TIMEOUT 120)
@@ -391,7 +512,7 @@ target_link_libraries(test_audit_log_widget PRIVATE
 add_test(NAME test_audit_log_widget COMMAND test_audit_log_widget -platform offscreen)
 set_tests_properties(test_audit_log_widget PROPERTIES
     TIMEOUT 60
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 sentinel_test(test_database_integration  test_database_integration.cpp)
 sentinel_test(test_hint_quality_mrr      test_hint_quality_mrr.cpp)
@@ -413,6 +534,7 @@ sentinel_test(test_hint_engine_lead_quality test_hint_engine_lead_quality.cpp)
 qt_add_executable(test_ui_widgets_deep
     test_ui_widgets_deep.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
@@ -424,7 +546,7 @@ target_link_libraries(test_ui_widgets_deep PRIVATE
 add_test(NAME test_ui_widgets_deep COMMAND test_ui_widgets_deep -platform offscreen)
 set_tests_properties(test_ui_widgets_deep PROPERTIES
     TIMEOUT 60
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 sentinel_test(test_bias_auditor_deep      test_bias_auditor_deep.cpp)
 
@@ -447,7 +569,7 @@ target_link_libraries(test_pipeline_stress PRIVATE
 add_test(NAME test_pipeline_stress COMMAND test_pipeline_stress)
 set_tests_properties(test_pipeline_stress PROPERTIES
     TIMEOUT 120
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 qt_add_executable(test_heatmap_widget
     test_heatmap_widget.cpp
@@ -460,13 +582,14 @@ target_link_libraries(test_heatmap_widget PRIVATE
 add_test(NAME test_heatmap_widget COMMAND test_heatmap_widget -platform offscreen)
 set_tests_properties(test_heatmap_widget PROPERTIES
     TIMEOUT 60
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 # Map and Analytics deep UI tests
 qt_add_executable(test_ui_map_analytics
     test_ui_map_analytics.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
 )
@@ -477,7 +600,7 @@ add_test(NAME test_ui_map_analytics COMMAND test_ui_map_analytics -platform offs
 set_tests_properties(test_ui_map_analytics PROPERTIES
     TIMEOUT 120
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 sentinel_test(test_gp_regression_full    test_gp_regression_full.cpp)
@@ -496,7 +619,7 @@ target_link_libraries(test_performance_benchmark PRIVATE
     sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
 add_test(NAME test_performance_benchmark COMMAND test_performance_benchmark -platform offscreen)
 set_tests_properties(test_performance_benchmark PROPERTIES TIMEOUT 120
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 # ── RiskForecaster alert & horizon tests ─────────────────────────────────────
 sentinel_test(test_risk_forecaster_alerts  test_risk_forecaster_alerts.cpp)
@@ -553,13 +676,14 @@ add_test(NAME test_temporal_heatmap_data
 set_tests_properties(test_temporal_heatmap_data PROPERTIES
     TIMEOUT 60
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 # ── AnalyticsWidget data-model tests ──────────────────────────────────────────
 qt_add_executable(test_analytics_widget_data
     test_analytics_widget_data.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
 )
@@ -571,7 +695,7 @@ add_test(NAME test_analytics_widget_data
 set_tests_properties(test_analytics_widget_data PROPERTIES
     TIMEOUT 60
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 # ── MainWindow integration test — needs QApplication + full UI source tree ───
@@ -584,9 +708,13 @@ qt_add_executable(test_main_window_integration
     ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
     ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
 )
 target_include_directories(test_main_window_integration PRIVATE
@@ -601,7 +729,7 @@ add_test(NAME test_main_window_integration
 set_tests_properties(test_main_window_integration PROPERTIES
     TIMEOUT 120
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 # ── EventsTableWidget focused tests ──────────────────────────────────────────
@@ -615,13 +743,16 @@ target_link_libraries(test_events_table_widget PRIVATE
 add_test(NAME test_events_table_widget COMMAND test_events_table_widget -platform offscreen)
 set_tests_properties(test_events_table_widget PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 # ── DebugConsoleWidget focused tests ─────────────────────────────────────────
 qt_add_executable(test_debug_console_widget
     test_debug_console_widget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
 )
 target_include_directories(test_debug_console_widget PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_debug_console_widget PRIVATE
@@ -629,7 +760,7 @@ target_link_libraries(test_debug_console_widget PRIVATE
 add_test(NAME test_debug_console_widget COMMAND test_debug_console_widget -platform offscreen)
 set_tests_properties(test_debug_console_widget PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 # ── MapWidget focused tests ───────────────────────────────────────────────────
@@ -643,7 +774,7 @@ target_link_libraries(test_map_widget PRIVATE
 add_test(NAME test_map_widget COMMAND test_map_widget -platform offscreen)
 set_tests_properties(test_map_widget PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 # ── DashboardWidget focused tests ─────────────────────────────────────────────
@@ -657,7 +788,7 @@ target_link_libraries(test_dashboard_widget PRIVATE
 add_test(NAME test_dashboard_widget COMMAND test_dashboard_widget -platform offscreen)
 set_tests_properties(test_dashboard_widget PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 # ── SettingsWidget headless tests ─────────────────────────────────────────────
@@ -671,7 +802,7 @@ target_link_libraries(test_settings_widget_headless PRIVATE
 add_test(NAME test_settings_widget_headless COMMAND test_settings_widget_headless -platform offscreen)
 set_tests_properties(test_settings_widget_headless PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 sentinel_test(test_pipeline_e2e_stress      test_pipeline_e2e_stress.cpp)
@@ -687,7 +818,7 @@ target_sources(appconfig_database_deep PRIVATE
 set_tests_properties(appconfig_database_deep PROPERTIES
     TIMEOUT 60
     LABELS "ui"
-    ENVIRONMENT "SENTINEL_HEADLESS_TEST=1" "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin" "QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV_HEADLESS}"
 )
 
 # ── MainWindow completeness test — needs QApplication + full UI source tree ──
@@ -700,9 +831,13 @@ qt_add_executable(main_window_completeness
     ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
     ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
 )
 target_include_directories(main_window_completeness PRIVATE
@@ -717,7 +852,7 @@ add_test(NAME main_window_completeness
 set_tests_properties(main_window_completeness PROPERTIES
     TIMEOUT 120
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 # ── Comprehensive UI widget tests (iteration 4) ───────────────────────────────
@@ -725,9 +860,13 @@ sentinel_test(ui_comprehensive
     test_ui_comprehensive.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
 )
@@ -819,7 +958,7 @@ add_test(NAME test_temporal_heatmap_deep2
 set_tests_properties(test_temporal_heatmap_deep2 PROPERTIES
     TIMEOUT 30
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}"
 )
 
 sentinel_test(appconfig_deep2 test_appconfig_deep2.cpp)
@@ -835,7 +974,7 @@ add_test(NAME test_database_deep2 COMMAND test_database_deep2 -platform offscree
 set_tests_properties(test_database_deep2 PROPERTIES
     TIMEOUT 30
     LABELS "db"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 sentinel_test(lead_report_deep2 test_lead_report_deep2.cpp)
 set_tests_properties(lead_report_deep2 PROPERTIES TIMEOUT 30)
@@ -913,7 +1052,7 @@ add_test(NAME test_database_deep3 COMMAND test_database_deep3 -platform offscree
 set_tests_properties(test_database_deep3 PROPERTIES
     TIMEOUT 30
     LABELS "db"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 sentinel_test(provenance_log_deep3 test_provenance_log_deep3.cpp)
 set_tests_properties(provenance_log_deep3 PROPERTIES TIMEOUT 30)
@@ -928,15 +1067,19 @@ qt_add_executable(test_main_window_deep2
     ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
     ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
 )
 target_include_directories(test_main_window_deep2 PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_main_window_deep2 PRIVATE sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
 add_test(NAME test_main_window_deep2 COMMAND test_main_window_deep2 -platform offscreen)
-set_tests_properties(test_main_window_deep2 PROPERTIES TIMEOUT 30 LABELS "ui" ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+set_tests_properties(test_main_window_deep2 PROPERTIES TIMEOUT 30 LABELS "ui" ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_dashboard_widget_deep2
     test_dashboard_widget_deep2.cpp
@@ -945,7 +1088,7 @@ qt_add_executable(test_dashboard_widget_deep2
 target_include_directories(test_dashboard_widget_deep2 PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_dashboard_widget_deep2 PRIVATE sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
 add_test(NAME test_dashboard_widget_deep2 COMMAND test_dashboard_widget_deep2 -platform offscreen)
-set_tests_properties(test_dashboard_widget_deep2 PROPERTIES TIMEOUT 30 LABELS "ui" ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+set_tests_properties(test_dashboard_widget_deep2 PROPERTIES TIMEOUT 30 LABELS "ui" ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 # ── Deep audit iteration 13: MapWidget, AnalyticsWidget, EventsTableWidget ────
 qt_add_executable(test_map_widget_deep2
@@ -958,11 +1101,12 @@ target_link_libraries(test_map_widget_deep2 PRIVATE
 add_test(NAME test_map_widget_deep2 COMMAND test_map_widget_deep2 -platform offscreen)
 set_tests_properties(test_map_widget_deep2 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_analytics_widget_deep2
     test_analytics_widget_deep2.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
 )
@@ -972,7 +1116,7 @@ target_link_libraries(test_analytics_widget_deep2 PRIVATE
 add_test(NAME test_analytics_widget_deep2 COMMAND test_analytics_widget_deep2 -platform offscreen)
 set_tests_properties(test_analytics_widget_deep2 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_events_table_deep2
     test_events_table_deep2.cpp
@@ -984,7 +1128,7 @@ target_link_libraries(test_events_table_deep2 PRIVATE
 add_test(NAME test_events_table_deep2 COMMAND test_events_table_deep2 -platform offscreen)
 set_tests_properties(test_events_table_deep2 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 sentinel_test(hawkes_process_deep4 test_hawkes_process_deep4.cpp)
 set_tests_properties(hawkes_process_deep4 PROPERTIES TIMEOUT 30)
@@ -1033,7 +1177,7 @@ qt_add_executable(test_database_migration_deep2 test_database_migration_deep2.cp
 target_include_directories(test_database_migration_deep2 PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_database_migration_deep2 PRIVATE sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
 add_test(NAME test_database_migration_deep2 COMMAND test_database_migration_deep2 -platform offscreen)
-set_tests_properties(test_database_migration_deep2 PROPERTIES TIMEOUT 30 LABELS "db" ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+set_tests_properties(test_database_migration_deep2 PROPERTIES TIMEOUT 30 LABELS "db" ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 # ── Deep audit iteration 14: MOAnalyser, MOExtractor, CrimeClassifier ─────────
 sentinel_test(mo_analyser_deep4 test_mo_analyser_deep4.cpp)
@@ -1062,7 +1206,7 @@ target_link_libraries(test_settings_widget_deep2 PRIVATE
 add_test(NAME test_settings_widget_deep2 COMMAND test_settings_widget_deep2 -platform offscreen)
 set_tests_properties(test_settings_widget_deep2 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "SENTINEL_HEADLESS_TEST=1;PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV_HEADLESS}")
 
 qt_add_executable(test_audit_log_deep2
     test_audit_log_deep2.cpp
@@ -1074,7 +1218,7 @@ target_link_libraries(test_audit_log_deep2 PRIVATE
 add_test(NAME test_audit_log_deep2 COMMAND test_audit_log_deep2 -platform offscreen)
 set_tests_properties(test_audit_log_deep2 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 sentinel_test(pipeline_stress_deep2 test_pipeline_stress_deep2.cpp)
 set_tests_properties(pipeline_stress_deep2 PROPERTIES TIMEOUT 120)
@@ -1114,7 +1258,7 @@ target_link_libraries(test_dashboard_widget_deep3 PRIVATE
 add_test(NAME test_dashboard_widget_deep3 COMMAND test_dashboard_widget_deep3 -platform offscreen)
 set_tests_properties(test_dashboard_widget_deep3 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_main_window_deep3
     test_main_window_deep3.cpp
@@ -1125,9 +1269,13 @@ qt_add_executable(test_main_window_deep3
     ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
     ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
 )
 target_include_directories(test_main_window_deep3 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -1136,7 +1284,7 @@ target_link_libraries(test_main_window_deep3 PRIVATE
 add_test(NAME test_main_window_deep3 COMMAND test_main_window_deep3 -platform offscreen)
 set_tests_properties(test_main_window_deep3 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 sentinel_test(pipeline_integration_deep2 test_pipeline_integration_deep2.cpp)
 set_tests_properties(pipeline_integration_deep2 PROPERTIES TIMEOUT 60)
@@ -1176,7 +1324,7 @@ target_link_libraries(test_map_widget_deep3 PRIVATE
 add_test(NAME test_map_widget_deep3 COMMAND test_map_widget_deep3 -platform offscreen)
 set_tests_properties(test_map_widget_deep3 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_events_table_deep3
     test_events_table_deep3.cpp
@@ -1188,7 +1336,7 @@ target_link_libraries(test_events_table_deep3 PRIVATE
 add_test(NAME test_events_table_deep3 COMMAND test_events_table_deep3 -platform offscreen)
 set_tests_properties(test_events_table_deep3 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_leads_widget_deep2
     test_leads_widget_deep2.cpp
@@ -1200,7 +1348,7 @@ target_link_libraries(test_leads_widget_deep2 PRIVATE
 add_test(NAME test_leads_widget_deep2 COMMAND test_leads_widget_deep2 -platform offscreen)
 set_tests_properties(test_leads_widget_deep2 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 # ── Deep audit iteration 17: TemporalFeatures, NearRepeat, WeatherSource ───────
 sentinel_test(temporal_features_deep4 test_temporal_features_deep4.cpp)
@@ -1230,6 +1378,7 @@ set_tests_properties(geographic_profiler_deep5 PROPERTIES TIMEOUT 30)
 qt_add_executable(test_analytics_widget_deep3
     test_analytics_widget_deep3.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
 )
@@ -1239,7 +1388,7 @@ target_link_libraries(test_analytics_widget_deep3 PRIVATE
 add_test(NAME test_analytics_widget_deep3 COMMAND test_analytics_widget_deep3 -platform offscreen)
 set_tests_properties(test_analytics_widget_deep3 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_temporal_heatmap_deep3
     test_temporal_heatmap_deep3.cpp
@@ -1253,11 +1402,14 @@ add_test(NAME test_temporal_heatmap_deep3
 set_tests_properties(test_temporal_heatmap_deep3 PROPERTIES
     TIMEOUT 30
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_debug_console_deep2
     test_debug_console_deep2.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
 )
 target_include_directories(test_debug_console_deep2 PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_debug_console_deep2 PRIVATE
@@ -1265,7 +1417,7 @@ target_link_libraries(test_debug_console_deep2 PRIVATE
 add_test(NAME test_debug_console_deep2 COMMAND test_debug_console_deep2 -platform offscreen)
 set_tests_properties(test_debug_console_deep2 PROPERTIES
     TIMEOUT 60 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 # ── Deep audit iteration 18: MOAnalyser, MOExtractor, CrimeClassifier ─────────
 sentinel_test(mo_analyser_deep5 test_mo_analyser_deep5.cpp)
@@ -1286,7 +1438,7 @@ target_link_libraries(test_settings_widget_deep3 PRIVATE
 add_test(NAME test_settings_widget_deep3 COMMAND test_settings_widget_deep3 -platform offscreen)
 set_tests_properties(test_settings_widget_deep3 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "SENTINEL_HEADLESS_TEST=1;PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV_HEADLESS}")
 
 qt_add_executable(test_audit_log_deep3
     test_audit_log_deep3.cpp
@@ -1298,7 +1450,7 @@ target_link_libraries(test_audit_log_deep3 PRIVATE
 add_test(NAME test_audit_log_deep3 COMMAND test_audit_log_deep3 -platform offscreen)
 set_tests_properties(test_audit_log_deep3 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_dashboard_widget_deep4
     test_dashboard_widget_deep4.cpp
@@ -1310,7 +1462,7 @@ target_link_libraries(test_dashboard_widget_deep4 PRIVATE
 add_test(NAME test_dashboard_widget_deep4 COMMAND test_dashboard_widget_deep4 -platform offscreen)
 set_tests_properties(test_dashboard_widget_deep4 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 # ── Deep audit iteration 18: SeriesDetector, HawkesProcess, KDEHotspot ────────
 sentinel_test(series_detector_deep5 test_series_detector_deep5.cpp)
@@ -1339,7 +1491,7 @@ target_link_libraries(test_leads_widget_deep3 PRIVATE
 add_test(NAME test_leads_widget_deep3 COMMAND test_leads_widget_deep3 -platform offscreen)
 set_tests_properties(test_leads_widget_deep3 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_events_table_deep4
     test_events_table_deep4.cpp
@@ -1351,7 +1503,7 @@ target_link_libraries(test_events_table_deep4 PRIVATE
 add_test(NAME test_events_table_deep4 COMMAND test_events_table_deep4 -platform offscreen)
 set_tests_properties(test_events_table_deep4 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_main_window_deep4
     test_main_window_deep4.cpp
@@ -1362,9 +1514,13 @@ qt_add_executable(test_main_window_deep4
     ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
     ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
 )
 target_include_directories(test_main_window_deep4 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -1373,7 +1529,7 @@ target_link_libraries(test_main_window_deep4 PRIVATE
 add_test(NAME test_main_window_deep4 COMMAND test_main_window_deep4 -platform offscreen)
 set_tests_properties(test_main_window_deep4 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 # ── Deep audit iteration 19: Database, CsvImporter, AppConfig ─────────────────
 sentinel_test(database_deep5 test_database_deep5.cpp)
@@ -1410,11 +1566,12 @@ target_link_libraries(test_map_widget_deep4 PRIVATE
 add_test(NAME test_map_widget_deep4 COMMAND test_map_widget_deep4 -platform offscreen)
 set_tests_properties(test_map_widget_deep4 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_analytics_widget_deep4
     test_analytics_widget_deep4.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
 )
@@ -1424,7 +1581,7 @@ target_link_libraries(test_analytics_widget_deep4 PRIVATE
 add_test(NAME test_analytics_widget_deep4 COMMAND test_analytics_widget_deep4 -platform offscreen)
 set_tests_properties(test_analytics_widget_deep4 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_temporal_heatmap_deep4
     test_temporal_heatmap_deep4.cpp
@@ -1438,7 +1595,7 @@ add_test(NAME test_temporal_heatmap_deep4
 set_tests_properties(test_temporal_heatmap_deep4 PROPERTIES
     TIMEOUT 30
     LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 # ── Deep audit iteration 20: HintEngine, LeadReportGenerator, CoOffendingAnalyser ───
 sentinel_test(hint_engine_deep6 test_hint_engine_deep6.cpp)
@@ -1475,7 +1632,7 @@ target_link_libraries(test_settings_widget_deep4 PRIVATE
 add_test(NAME test_settings_widget_deep4 COMMAND test_settings_widget_deep4 -platform offscreen)
 set_tests_properties(test_settings_widget_deep4 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "SENTINEL_HEADLESS_TEST=1;PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV_HEADLESS}")
 
 qt_add_executable(test_audit_log_deep4
     test_audit_log_deep4.cpp
@@ -1487,7 +1644,7 @@ target_link_libraries(test_audit_log_deep4 PRIVATE
 add_test(NAME test_audit_log_deep4 COMMAND test_audit_log_deep4 -platform offscreen)
 set_tests_properties(test_audit_log_deep4 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_leads_widget_deep4
     test_leads_widget_deep4.cpp
@@ -1499,7 +1656,7 @@ target_link_libraries(test_leads_widget_deep4 PRIVATE
 add_test(NAME test_leads_widget_deep4 COMMAND test_leads_widget_deep4 -platform offscreen)
 set_tests_properties(test_leads_widget_deep4 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 # ── Deep audit iteration 21: RiskForecaster, EnsemblePredictor, PoissonBaseline ─
 sentinel_test(risk_forecaster_deep6 test_risk_forecaster_deep6.cpp)
@@ -1562,9 +1719,13 @@ qt_add_executable(test_main_window_deep5
     ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
     ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
 )
 target_include_directories(test_main_window_deep5 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -1573,11 +1734,14 @@ target_link_libraries(test_main_window_deep5 PRIVATE
 add_test(NAME test_main_window_deep5 COMMAND test_main_window_deep5 -platform offscreen)
 set_tests_properties(test_main_window_deep5 PROPERTIES
     TIMEOUT 30 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
 
 qt_add_executable(test_debug_console_deep3
     test_debug_console_deep3.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
 )
 target_include_directories(test_debug_console_deep3 PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_debug_console_deep3 PRIVATE
@@ -1585,4 +1749,540 @@ target_link_libraries(test_debug_console_deep3 PRIVATE
 add_test(NAME test_debug_console_deep3 COMMAND test_debug_console_deep3 -platform offscreen)
 set_tests_properties(test_debug_console_deep3 PROPERTIES
     TIMEOUT 120 LABELS "ui"
-    ENVIRONMENT "PATH=C:/Qt/6.11.0/mingw_64/bin\\;C:/Qt/Tools/mingw1310_64/bin;QT_PLUGIN_PATH=C:/Qt/6.11.0/mingw_64/plugins")
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+# ── Deep audit iteration 23: BiasAuditor, BayesianHierarchical, MOAnalyser ───
+sentinel_test(bias_auditor_deep3 test_bias_auditor_deep3.cpp)
+set_tests_properties(bias_auditor_deep3 PROPERTIES TIMEOUT 30)
+sentinel_test(bayesian_hierarchical_deep6 test_bayesian_hierarchical_deep6.cpp)
+set_tests_properties(bayesian_hierarchical_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(mo_analyser_deep6 test_mo_analyser_deep6.cpp)
+set_tests_properties(mo_analyser_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(lead_report_deep7 test_lead_report_deep7.cpp)
+set_tests_properties(lead_report_deep7 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 23: UKPolice, Weather, DataQuality, CsvImporter ────
+sentinel_test(uk_police_source_deep5 test_uk_police_source_deep5.cpp)
+set_tests_properties(uk_police_source_deep5 PROPERTIES TIMEOUT 30)
+sentinel_test(weather_source_deep5 test_weather_source_deep5.cpp)
+set_tests_properties(weather_source_deep5 PROPERTIES TIMEOUT 30)
+sentinel_test(data_quality_deep5 test_data_quality_deep5.cpp)
+set_tests_properties(data_quality_deep5 PROPERTIES TIMEOUT 30)
+sentinel_test(csv_importer_deep7 test_csv_importer_deep7.cpp)
+set_tests_properties(csv_importer_deep7 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 23: CoOffending, Pipeline integration ────────────────
+sentinel_test(cooffending_deep7 test_cooffending_deep7.cpp)
+set_tests_properties(cooffending_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(pipeline_integration_deep3 test_pipeline_integration_deep3.cpp)
+set_tests_properties(pipeline_integration_deep3 PROPERTIES TIMEOUT 60)
+
+# ── Deep audit iteration 23: DashboardWidget, EventsTableWidget (UI) ────────
+qt_add_executable(test_dashboard_widget_deep5
+    test_dashboard_widget_deep5.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+)
+target_include_directories(test_dashboard_widget_deep5 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_dashboard_widget_deep5 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_dashboard_widget_deep5 COMMAND test_dashboard_widget_deep5 -platform offscreen)
+set_tests_properties(test_dashboard_widget_deep5 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_events_table_deep5
+    test_events_table_deep5.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+)
+target_include_directories(test_events_table_deep5 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_events_table_deep5 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_events_table_deep5 COMMAND test_events_table_deep5 -platform offscreen)
+set_tests_properties(test_events_table_deep5 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+# ── Deep audit iteration 24: RiskForecaster, Ensemble, Poisson, Series ────────
+sentinel_test(risk_forecaster_deep7 test_risk_forecaster_deep7.cpp)
+set_tests_properties(risk_forecaster_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(ensemble_predictor_deep7 test_ensemble_predictor_deep7.cpp)
+set_tests_properties(ensemble_predictor_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(poisson_baseline_deep9 test_poisson_baseline_deep9.cpp)
+set_tests_properties(poisson_baseline_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(series_detector_deep7 test_series_detector_deep7.cpp)
+set_tests_properties(series_detector_deep7 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 24: KDE, Hawkes, NearRepeat, GPRegression ──────────
+sentinel_test(kde_hotspot_deep7 test_kde_hotspot_deep7.cpp)
+set_tests_properties(kde_hotspot_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(hawkes_process_deep9 test_hawkes_process_deep9.cpp)
+set_tests_properties(hawkes_process_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(near_repeat_deep8 test_near_repeat_deep8.cpp)
+set_tests_properties(near_repeat_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(gp_regression_deep8 test_gp_regression_deep8.cpp)
+set_tests_properties(gp_regression_deep8 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 24: MOExtractor ──────────────────────────────────────
+sentinel_test(mo_extractor_deep5 test_mo_extractor_deep5.cpp)
+set_tests_properties(mo_extractor_deep5 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 24: MapWidget, AnalyticsWidget, TemporalHeatmap (UI) ─
+qt_add_executable(test_map_widget_deep5
+    test_map_widget_deep5.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+)
+target_include_directories(test_map_widget_deep5 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_map_widget_deep5 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_map_widget_deep5 COMMAND test_map_widget_deep5 -platform offscreen)
+set_tests_properties(test_map_widget_deep5 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_analytics_widget_deep5
+    test_analytics_widget_deep5.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+)
+target_include_directories(test_analytics_widget_deep5 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_analytics_widget_deep5 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_analytics_widget_deep5 COMMAND test_analytics_widget_deep5 -platform offscreen)
+set_tests_properties(test_analytics_widget_deep5 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_temporal_heatmap_deep5
+    test_temporal_heatmap_deep5.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+)
+target_include_directories(test_temporal_heatmap_deep5 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_temporal_heatmap_deep5 PRIVATE
+    sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
+add_test(NAME test_temporal_heatmap_deep5 COMMAND test_temporal_heatmap_deep5 -platform offscreen)
+set_tests_properties(test_temporal_heatmap_deep5 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+# ── Deep audit iteration 25: GeographicProfiler, HintEngine, EvidenceScorer ───
+sentinel_test(geographic_profiler_deep8 test_geographic_profiler_deep8.cpp)
+set_tests_properties(geographic_profiler_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(hint_engine_deep8 test_hint_engine_deep8.cpp)
+set_tests_properties(hint_engine_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(evidence_scorer_deep9 test_evidence_scorer_deep9.cpp)
+set_tests_properties(evidence_scorer_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(anomaly_detector_deep8 test_anomaly_detector_deep8.cpp)
+set_tests_properties(anomaly_detector_deep8 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 25: Calibration, Temporal, CrimeClassifier ───────────
+sentinel_test(calibration_analyser_deep6 test_calibration_analyser_deep6.cpp)
+set_tests_properties(calibration_analyser_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(temporal_features_deep6 test_temporal_features_deep6.cpp)
+set_tests_properties(temporal_features_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(crime_classifier_deep6 test_crime_classifier_deep6.cpp)
+set_tests_properties(crime_classifier_deep6 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 25: SentinelLogger, Provenance, Database ─────────────
+sentinel_test(sentinel_logger_deep6 test_sentinel_logger_deep6.cpp)
+set_tests_properties(sentinel_logger_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(provenance_deep6 test_provenance_deep6.cpp)
+set_tests_properties(provenance_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(database_deep6 test_database_deep6.cpp)
+set_tests_properties(database_deep6 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 25: LeadsWidget, SettingsWidget (UI) ────────────────
+qt_add_executable(test_leads_widget_deep5
+    test_leads_widget_deep5.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+)
+target_include_directories(test_leads_widget_deep5 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_leads_widget_deep5 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_leads_widget_deep5 COMMAND test_leads_widget_deep5 -platform offscreen)
+set_tests_properties(test_leads_widget_deep5 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_settings_widget_deep5
+    test_settings_widget_deep5.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
+)
+target_include_directories(test_settings_widget_deep5 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_settings_widget_deep5 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_settings_widget_deep5 COMMAND test_settings_widget_deep5 -platform offscreen)
+set_tests_properties(test_settings_widget_deep5 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+# ── Deep audit iteration 26: RiskForecaster, Ensemble, MOAnalyser, LeadReport ─
+sentinel_test(risk_forecaster_deep8 test_risk_forecaster_deep8.cpp)
+set_tests_properties(risk_forecaster_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(ensemble_predictor_deep8 test_ensemble_predictor_deep8.cpp)
+set_tests_properties(ensemble_predictor_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(mo_analyser_deep7 test_mo_analyser_deep7.cpp)
+set_tests_properties(mo_analyser_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(lead_report_deep8 test_lead_report_deep8.cpp)
+set_tests_properties(lead_report_deep8 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 26: DataExporter, AppConfig, Benchmark, Bayesian ───────
+sentinel_test(data_exporter_deep7 test_data_exporter_deep7.cpp)
+set_tests_properties(data_exporter_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(appconfig_deep6 test_appconfig_deep6.cpp)
+set_tests_properties(appconfig_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(benchmark_metrics_deep7 test_benchmark_metrics_deep7.cpp)
+set_tests_properties(benchmark_metrics_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(bayesian_hierarchical_deep7 test_bayesian_hierarchical_deep7.cpp)
+set_tests_properties(bayesian_hierarchical_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(pipeline_integration_deep4 test_pipeline_integration_deep4.cpp)
+set_tests_properties(pipeline_integration_deep4 PROPERTIES TIMEOUT 60)
+
+# ── Deep audit iteration 26: MainWindow, DebugConsole, AuditLog (UI) ────────
+qt_add_executable(test_main_window_deep6
+    test_main_window_deep6.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MainWindow.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AuditLogWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
+    ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
+)
+target_include_directories(test_main_window_deep6 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_main_window_deep6 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_main_window_deep6 COMMAND test_main_window_deep6 -platform offscreen)
+set_tests_properties(test_main_window_deep6 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_debug_console_deep6
+    test_debug_console_deep6.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
+)
+target_include_directories(test_debug_console_deep6 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_debug_console_deep6 PRIVATE
+    sentinel_core Qt6::Core Qt6::Widgets Qt6::Test Qt6::Charts Qt6::Sql Qt6::Network)
+add_test(NAME test_debug_console_deep6 COMMAND test_debug_console_deep6 -platform offscreen)
+set_tests_properties(test_debug_console_deep6 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_audit_log_deep5
+    test_audit_log_deep5.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AuditLogWidget.cpp
+)
+target_include_directories(test_audit_log_deep5 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_audit_log_deep5 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_audit_log_deep5 COMMAND test_audit_log_deep5 -platform offscreen)
+set_tests_properties(test_audit_log_deep5 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+# ── Deep audit iteration 27: HintEngine, GeographicProfiler, Anomaly, Evidence ─
+sentinel_test(hint_engine_deep9 test_hint_engine_deep9.cpp)
+set_tests_properties(hint_engine_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(geographic_profiler_deep9 test_geographic_profiler_deep9.cpp)
+set_tests_properties(geographic_profiler_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(anomaly_detector_deep9 test_anomaly_detector_deep9.cpp)
+set_tests_properties(anomaly_detector_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(evidence_scorer_deep10 test_evidence_scorer_deep10.cpp)
+set_tests_properties(evidence_scorer_deep10 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 27: BiasAuditor, CoOffending, CsvImporter, DataQuality
+sentinel_test(bias_auditor_deep4 test_bias_auditor_deep4.cpp)
+set_tests_properties(bias_auditor_deep4 PROPERTIES TIMEOUT 30)
+sentinel_test(cooffending_deep8 test_cooffending_deep8.cpp)
+set_tests_properties(cooffending_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(csv_importer_deep8 test_csv_importer_deep8.cpp)
+set_tests_properties(csv_importer_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(data_quality_deep6 test_data_quality_deep6.cpp)
+set_tests_properties(data_quality_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(series_detector_deep8 test_series_detector_deep8.cpp)
+set_tests_properties(series_detector_deep8 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 27: EventsTable, Dashboard, Analytics (UI) ───────────
+qt_add_executable(test_events_table_deep6
+    test_events_table_deep6.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+)
+target_include_directories(test_events_table_deep6 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_events_table_deep6 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_events_table_deep6 COMMAND test_events_table_deep6 -platform offscreen)
+set_tests_properties(test_events_table_deep6 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_dashboard_widget_deep6
+    test_dashboard_widget_deep6.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+)
+target_include_directories(test_dashboard_widget_deep6 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_dashboard_widget_deep6 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_dashboard_widget_deep6 COMMAND test_dashboard_widget_deep6 -platform offscreen)
+set_tests_properties(test_dashboard_widget_deep6 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_analytics_widget_deep6
+    test_analytics_widget_deep6.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+)
+target_include_directories(test_analytics_widget_deep6 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_analytics_widget_deep6 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_analytics_widget_deep6 COMMAND test_analytics_widget_deep6 -platform offscreen)
+set_tests_properties(test_analytics_widget_deep6 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+# ── Deep audit iteration 28: Poisson, Hawkes, NearRepeat, GPRegression ────────
+sentinel_test(poisson_baseline_deep10 test_poisson_baseline_deep10.cpp)
+set_tests_properties(poisson_baseline_deep10 PROPERTIES TIMEOUT 30)
+sentinel_test(hawkes_process_deep10 test_hawkes_process_deep10.cpp)
+set_tests_properties(hawkes_process_deep10 PROPERTIES TIMEOUT 30)
+sentinel_test(near_repeat_deep9 test_near_repeat_deep9.cpp)
+set_tests_properties(near_repeat_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(gp_regression_deep9 test_gp_regression_deep9.cpp)
+set_tests_properties(gp_regression_deep9 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 28: KDE, RiskForecaster, Ensemble, MOExtractor ───────
+sentinel_test(kde_hotspot_deep8 test_kde_hotspot_deep8.cpp)
+set_tests_properties(kde_hotspot_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(risk_forecaster_deep9 test_risk_forecaster_deep9.cpp)
+set_tests_properties(risk_forecaster_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(ensemble_predictor_deep9 test_ensemble_predictor_deep9.cpp)
+set_tests_properties(ensemble_predictor_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(mo_extractor_deep6 test_mo_extractor_deep6.cpp)
+set_tests_properties(mo_extractor_deep6 PROPERTIES TIMEOUT 30)
+sentinel_test(temporal_features_deep7 test_temporal_features_deep7.cpp)
+set_tests_properties(temporal_features_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(provenance_deep7 test_provenance_deep7.cpp)
+set_tests_properties(provenance_deep7 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 28: MapWidget, LeadsWidget (UI) ──────────────────────
+qt_add_executable(test_map_widget_deep6
+    test_map_widget_deep6.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+)
+target_include_directories(test_map_widget_deep6 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_map_widget_deep6 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_map_widget_deep6 COMMAND test_map_widget_deep6 -platform offscreen)
+set_tests_properties(test_map_widget_deep6 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_leads_widget_deep6
+    test_leads_widget_deep6.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+)
+target_include_directories(test_leads_widget_deep6 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_leads_widget_deep6 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_leads_widget_deep6 COMMAND test_leads_widget_deep6 -platform offscreen)
+set_tests_properties(test_leads_widget_deep6 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+# ── Deep audit iteration 29: HintEngine, GeographicProfiler, AnomalyDetector ─
+sentinel_test(hint_engine_deep10 test_hint_engine_deep10.cpp)
+set_tests_properties(hint_engine_deep10 PROPERTIES TIMEOUT 30)
+sentinel_test(geographic_profiler_deep10 test_geographic_profiler_deep10.cpp)
+set_tests_properties(geographic_profiler_deep10 PROPERTIES TIMEOUT 30)
+sentinel_test(anomaly_detector_deep10 test_anomaly_detector_deep10.cpp)
+set_tests_properties(anomaly_detector_deep10 PROPERTIES TIMEOUT 30)
+sentinel_test(evidence_scorer_deep11 test_evidence_scorer_deep11.cpp)
+set_tests_properties(evidence_scorer_deep11 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 29: SeriesDetector, CoOffending, CsvImporter ───────
+sentinel_test(series_detector_deep9 test_series_detector_deep9.cpp)
+set_tests_properties(series_detector_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(cooffending_deep9 test_cooffending_deep9.cpp)
+set_tests_properties(cooffending_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(csv_importer_deep9 test_csv_importer_deep9.cpp)
+set_tests_properties(csv_importer_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(data_quality_deep7 test_data_quality_deep7.cpp)
+set_tests_properties(data_quality_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(lead_report_deep9 test_lead_report_deep9.cpp)
+set_tests_properties(lead_report_deep9 PROPERTIES TIMEOUT 30)
+sentinel_test(crime_classifier_deep7 test_crime_classifier_deep7.cpp)
+set_tests_properties(crime_classifier_deep7 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 29: SettingsWidget, AuditLogWidget (UI) ─────────────
+qt_add_executable(test_settings_widget_deep6
+    test_settings_widget_deep6.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
+)
+target_include_directories(test_settings_widget_deep6 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_settings_widget_deep6 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_settings_widget_deep6 COMMAND test_settings_widget_deep6 -platform offscreen)
+set_tests_properties(test_settings_widget_deep6 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_audit_log_deep6
+    test_audit_log_deep6.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AuditLogWidget.cpp
+)
+target_include_directories(test_audit_log_deep6 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_audit_log_deep6 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_audit_log_deep6 COMMAND test_audit_log_deep6 -platform offscreen)
+set_tests_properties(test_audit_log_deep6 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+# ── Deep audit iteration 30: MOAnalyser, Bayesian, Calibration, Benchmark ───
+sentinel_test(mo_analyser_deep8 test_mo_analyser_deep8.cpp)
+set_tests_properties(mo_analyser_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(bayesian_hierarchical_deep8 test_bayesian_hierarchical_deep8.cpp)
+set_tests_properties(bayesian_hierarchical_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(calibration_analyser_deep7 test_calibration_analyser_deep7.cpp)
+set_tests_properties(calibration_analyser_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(benchmark_metrics_deep8 test_benchmark_metrics_deep8.cpp)
+set_tests_properties(benchmark_metrics_deep8 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 30: DataExporter, AppConfig, SentinelLogger, Database
+sentinel_test(data_exporter_deep8 test_data_exporter_deep8.cpp)
+set_tests_properties(data_exporter_deep8 PROPERTIES TIMEOUT 30)
+sentinel_test(appconfig_deep7 test_appconfig_deep7.cpp)
+set_tests_properties(appconfig_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(sentinel_logger_deep7 test_sentinel_logger_deep7.cpp)
+set_tests_properties(sentinel_logger_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(database_deep7 test_database_deep7.cpp)
+set_tests_properties(database_deep7 PROPERTIES TIMEOUT 30)
+sentinel_test(bias_auditor_deep5 test_bias_auditor_deep5.cpp)
+set_tests_properties(bias_auditor_deep5 PROPERTIES TIMEOUT 30)
+
+# ── Deep audit iteration 30: MainWindow, Dashboard, EventsTable (UI) ─────────
+qt_add_executable(test_main_window_deep7
+    test_main_window_deep7.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MainWindow.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AuditLogWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/MapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/LeadsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AnalyticsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/TemporalHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/SettingsWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DebugConsoleWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
+    ${CMAKE_SOURCE_DIR}/resources/sentinel.qrc
+)
+target_include_directories(test_main_window_deep7 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_main_window_deep7 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_main_window_deep7 COMMAND test_main_window_deep7 -platform offscreen)
+set_tests_properties(test_main_window_deep7 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_dashboard_widget_deep7
+    test_dashboard_widget_deep7.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/DashboardWidget.cpp
+)
+target_include_directories(test_dashboard_widget_deep7 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_dashboard_widget_deep7 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_dashboard_widget_deep7 COMMAND test_dashboard_widget_deep7 -platform offscreen)
+set_tests_properties(test_dashboard_widget_deep7 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_events_table_deep7
+    test_events_table_deep7.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/EventsTableWidget.cpp
+)
+target_include_directories(test_events_table_deep7 PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_events_table_deep7 PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_events_table_deep7 COMMAND test_events_table_deep7 -platform offscreen)
+set_tests_properties(test_events_table_deep7 PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+# ── Local real-world datasets (sentinel/data/) ────────────────────────────────
+qt_add_executable(test_local_datasets test_local_datasets.cpp)
+target_include_directories(test_local_datasets PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(test_local_datasets PRIVATE
+    SENTINEL_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
+target_link_libraries(test_local_datasets PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_local_datasets COMMAND test_local_datasets)
+set_tests_properties(test_local_datasets PROPERTIES
+    TIMEOUT 600
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+# ── Real-world data quantitative evaluation ───────────────────────────────────
+qt_add_executable(test_real_data_evaluation test_real_data_evaluation.cpp)
+target_include_directories(test_real_data_evaluation PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(test_real_data_evaluation PRIVATE
+    SENTINEL_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
+target_link_libraries(test_real_data_evaluation PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_real_data_evaluation COMMAND test_real_data_evaluation)
+set_tests_properties(test_real_data_evaluation PROPERTIES
+    TIMEOUT 600
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_case_workspace
+    test_case_workspace.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CaseWorkspaceWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/GeoProfileHeatmapWidget.cpp
+)
+target_include_directories(test_case_workspace PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_case_workspace PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_case_workspace COMMAND test_case_workspace -platform offscreen)
+set_tests_properties(test_case_workspace PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_co_offending_db
+    test_co_offending_db.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CoOffendingGraphWidget.cpp
+)
+target_include_directories(test_co_offending_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_co_offending_db PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_co_offending_db COMMAND test_co_offending_db -platform offscreen)
+set_tests_properties(test_co_offending_db PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")
+
+qt_add_executable(test_calibration_dashboard
+    test_calibration_dashboard.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/CalibrationDashboardWidget.cpp
+)
+target_include_directories(test_calibration_dashboard PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_calibration_dashboard PRIVATE
+    sentinel_core Qt6::Core Qt6::Test Qt6::Sql Qt6::Network Qt6::Charts Qt6::Widgets)
+add_test(NAME test_calibration_dashboard COMMAND test_calibration_dashboard -platform offscreen)
+set_tests_properties(test_calibration_dashboard PROPERTIES
+    TIMEOUT 30 LABELS "ui"
+    ENVIRONMENT "${SENTINEL_TEST_ENV}")

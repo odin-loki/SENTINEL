@@ -6,6 +6,8 @@
 #include <array>
 #include "core/CrimeEvent.h"
 
+struct AppConfig;
+
 struct SeriesEvent {
     QString eventId;
     double  lat, lon;
@@ -35,7 +37,10 @@ public:
 
     SeriesDetector(double epsKm     = 0.3,
                    double epsDays   = 14.0,
-                   int    minSamples = 3);
+                   int    minSamples = 3,
+                   const QMap<QString, double>& epsOverridesKm = {});
+
+    static SeriesDetector fromConfig(const AppConfig& cfg);
 
     // Detect series in a set of events using spatiotemporal DBSCAN
     QVector<CrimeSeries> detectSeries(const QVector<SeriesEvent>& events);
@@ -59,10 +64,20 @@ public:
     // Public so external callers and tests can inspect the calibration table.
     static NearRepeatParams nearRepeatFor(const QString& crimeType);
 
+    // Crime-type bucket for per-type DBSCAN eps overrides
+    static QString crimeBucket(const QString& crimeType);
+
 private:
     double m_epsKm;
     double m_epsDays;
     int    m_minSamples;
+    QMap<QString, double> m_epsOverridesKm;
+
+    double epsKmFor(const QString& crimeType) const;
+
+    QVector<CrimeSeries> clusterSubset(const QVector<SeriesEvent>& events,
+                                       double epsKm,
+                                       int seriesIdOffset) const;
 
     // Core DBSCAN: returns per-point cluster label (-1 = noise, >=0 = cluster)
     QVector<int> dbscan(const QVector<std::array<double, 3>>& points,

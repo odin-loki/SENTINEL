@@ -93,9 +93,13 @@ static std::optional<QDateTime> parseDate(const QString& raw)
         QStringLiteral("MM/dd/yyyy hh:mm:ss AP"),
         QStringLiteral("MM/dd/yyyy HH:mm:ss"),
         QStringLiteral("MM/dd/yyyy"),
+        QStringLiteral("yyyy/MM/dd hh:mm:ss AP"),
+        QStringLiteral("yyyy/MM/dd HH:mm:ss"),
+        QStringLiteral("yyyy/MM/dd"),
         QStringLiteral("yyyy-MM-dd HH:mm:ss"),
         QStringLiteral("yyyy-MM-ddTHH:mm:ss"),
         QStringLiteral("yyyy-MM-dd"),
+        QStringLiteral("yyyy-MM"),
         QStringLiteral("dd/MM/yyyy HH:mm"),
         QStringLiteral("dd/MM/yyyy"),
         QStringLiteral("M/d/yyyy H:mm"),
@@ -166,7 +170,6 @@ CrimeEvent CsvImporter::parseRow(const QStringList& fields,
     const QString outcome = safeField(map.outcomeCol);
     if (!outcome.isEmpty()) ev.outcome = outcome;
 
-    ev.qualityScore = 0.5;
     return ev;
 }
 

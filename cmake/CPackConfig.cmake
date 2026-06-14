@@ -1,0 +1,41 @@
+# CPack configuration for SENTINEL native releases
+get_filename_component(_SENTINEL_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+
+if(NOT DEFINED CMAKE_PROJECT_VERSION OR CMAKE_PROJECT_VERSION STREQUAL "")
+    set(_SENTINEL_VERSION "1.0.0")
+else()
+    set(_SENTINEL_VERSION "${CMAKE_PROJECT_VERSION}")
+endif()
+
+set(CPACK_PACKAGE_NAME "sentinel")
+set(CPACK_PACKAGE_VENDOR "SENTINEL")
+set(CPACK_PACKAGE_CONTACT "support@sentinel.local")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "SENTINEL — Crime Analytics and Investigative Decision Support")
+set(CPACK_PACKAGE_DESCRIPTION
+    "Standalone desktop application for transparent crime analytics, "
+    "investigative lead generation, and full provenance auditing.")
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "SENTINEL")
+set(CPACK_RESOURCE_FILE_LICENSE "${_SENTINEL_ROOT}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${_SENTINEL_ROOT}/README.md")
+
+if(WIN32)
+    set(CPACK_GENERATOR "NSIS;ZIP")
+    set(CPACK_NSIS_DISPLAY_NAME "SENTINEL Crime Analytics")
+    set(CPACK_NSIS_PACKAGE_NAME "SENTINEL")
+    set(CPACK_NSIS_HELP_LINK "https://github.com/sentinel")
+    set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/sentinel")
+    set(CPACK_NSIS_MODIFY_PATH ON)
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    set(CPACK_PACKAGE_FILE_NAME "SENTINEL-${_SENTINEL_VERSION}-win64")
+elseif(UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "DEB;TGZ")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS
+        "libqt6widgets6 (>= 6.4), libqt6charts6 (>= 6.4), libqt6sql6-sqlite (>= 6.4)")
+    set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+    set(CPACK_PACKAGE_FILE_NAME "SENTINEL-${_SENTINEL_VERSION}-linux-x86_64")
+endif()

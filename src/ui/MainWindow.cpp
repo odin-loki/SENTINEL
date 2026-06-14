@@ -4,15 +4,22 @@
 #include "ui/EventsTableWidget.h"
 #include "ui/AnalyticsWidget.h"
 #include "ui/LeadsWidget.h"
+#include "ui/CaseWorkspaceWidget.h"
+#include "ui/CoOffendingGraphWidget.h"
 #include "ui/SettingsWidget.h"
 #include "ui/MapWidget.h"
 #include "ui/DebugConsoleWidget.h"
 #include "ingest/CsvImporter.h"
+#include "ingest/IngestEnricher.h"
 #include "ingest/UKPoliceSource.h"
 #include "core/DataExporter.h"
 #include "benchmark/BenchmarkMetrics.h"
+#include "models/KDEHotspot.h"
 #include "models/RiskForecaster.h"
 #include "inference/HintEngine.h"
+
+#include <algorithm>
+#include <cmath>
 
 #include <QApplication>
 #include <QHBoxLayout>
@@ -20,6 +27,7 @@
 #include <QMenuBar>
 #include <QToolBar>
 #include <QFileDialog>
+#include <QFile>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QAction>
@@ -27,6 +35,80 @@
 #include <QIcon>
 #include <QFrame>
 #include <QSizePolicy>
+
+namespace {
+
+struct GridPaiInputs {
+    QVector<double> yTrue;
+    QVector<double> yPred;
+    int trainCrimes = 0;
+    int testCrimes  = 0;
+};
+
+GridPaiInputs buildKdeHoldoutPai(const QVector<CrimeEvent>& events, int gridN = 40)
+{
+    GridPaiInputs out;
+    QVector<QPair<double, double>> trainLocs, testLocs;
+
+    for (const CrimeEvent& e : events) {
+        if (!e.lat || !e.lon || !e.occurredAt)
+            continue;
+        const auto loc = qMakePair(*e.lat, *e.lon);
+        const int month = e.occurredAt->date().month();
+        if (month <= 4)
+            trainLocs.append(loc);
+        else
+            testLocs.append(loc);
+    }
+
+    out.trainCrimes = trainLocs.size();
+    out.testCrimes  = testLocs.size();
+    if (trainLocs.size() < 50 || testLocs.size() < 20)
+        return out;
+
+    double latMin = 90, latMax = -90, lonMin = 180, lonMax = -180;
+    const auto expand = [&](const QVector<QPair<double, double>>& locs) {
+        for (const auto& p : locs) {
+            latMin = std::min(latMin, p.first);
+            latMax = std::max(latMax, p.first);
+            lonMin = std::min(lonMin, p.second);
+            lonMax = std::max(lonMax, p.second);
+        }
+    };
+    expand(trainLocs);
+    expand(testLocs);
+
+    KDEHotspot kde(gridN);
+    const auto surface = kde.compute(trainLocs, latMin, latMax, lonMin, lonMax);
+
+    const double latStep = (latMax - latMin) / gridN;
+    const double lonStep = (lonMax - lonMin) / gridN;
+
+    out.yTrue.reserve(gridN * gridN);
+    out.yPred.reserve(gridN * gridN);
+
+    for (int row = 0; row < gridN; ++row) {
+        for (int col = 0; col < gridN; ++col) {
+            const double cellLat = latMin + (row + 0.5) * latStep;
+            const double cellLon = lonMin + (col + 0.5) * lonStep;
+            const double halfLat = latStep * 0.5;
+            const double halfLon = lonStep * 0.5;
+
+            int crimesInCell = 0;
+            for (const auto& p : testLocs) {
+                if (std::abs(p.first - cellLat) <= halfLat
+                    && std::abs(p.second - cellLon) <= halfLon)
+                    ++crimesInCell;
+            }
+
+            out.yTrue.append(crimesInCell > 0 ? 1.0 : 0.0);
+            out.yPred.append(surface[static_cast<size_t>(row)][static_cast<size_t>(col)]);
+        }
+    }
+    return out;
+}
+
+} // namespace
 
 static constexpr int NAV_WIDTH = 200;
 
@@ -42,6 +124,8 @@ MainWindow::MainWindow(AppConfig& cfg, std::shared_ptr<Database> db, QWidget* pa
     , m_dashboard(nullptr)
     , m_eventsTable(nullptr)
     , m_analytics(nullptr)
+    , m_caseWorkspace(nullptr)
+    , m_coOffendingGraph(nullptr)
     , m_leads(nullptr)
     , m_auditLog(nullptr)
     , m_settings(nullptr)
@@ -82,6 +166,8 @@ MainWindow::MainWindow(AppConfig& cfg, std::shared_ptr<Database> db, QWidget* pa
         connect(m_autoRefreshTimer, &QTimer::timeout, this, &MainWindow::onRefreshRequested);
         m_autoRefreshTimer->start();
     }
+
+    syncLocalApi();
 
     // Initial data load
     onRefreshRequested();
@@ -130,10 +216,12 @@ void MainWindow::setupUI()
     // ── Page stack ───────────────────────────────────────────────────────────
     m_stack = new QStackedWidget(this);
 
-    m_dashboard   = new DashboardWidget(m_db, m_cfg, this);
-    m_eventsTable = new EventsTableWidget(m_db, this);
-    m_analytics   = new AnalyticsWidget(m_db, m_cfg, this);
-    m_leads       = new LeadsWidget(m_db, this);
+    m_dashboard       = new DashboardWidget(m_db, m_cfg, this);
+    m_eventsTable     = new EventsTableWidget(m_db, this);
+    m_analytics       = new AnalyticsWidget(m_db, m_cfg, this);
+    m_caseWorkspace   = new CaseWorkspaceWidget(m_db, this);
+    m_coOffendingGraph = new CoOffendingGraphWidget(m_db, this);
+    m_leads           = new LeadsWidget(m_db, this);
 
     // Audit log
     m_auditLog = new AuditLogWidget(m_provenanceLog, this);
@@ -141,13 +229,15 @@ void MainWindow::setupUI()
     m_settings     = new SettingsWidget(m_cfg, this);
     m_debugConsole = new DebugConsoleWidget(this);
 
-    m_stack->addWidget(m_dashboard);       // 0
-    m_stack->addWidget(m_eventsTable);     // 1
-    m_stack->addWidget(m_analytics);       // 2
-    m_stack->addWidget(m_leads);           // 3
-    m_stack->addWidget(m_auditLog);        // 4
-    m_stack->addWidget(m_settings);        // 5
-    m_stack->addWidget(m_debugConsole);    // 6
+    m_stack->addWidget(m_dashboard);         // 0
+    m_stack->addWidget(m_eventsTable);       // 1
+    m_stack->addWidget(m_analytics);         // 2
+    m_stack->addWidget(m_caseWorkspace);     // 3
+    m_stack->addWidget(m_coOffendingGraph);  // 4
+    m_stack->addWidget(m_leads);             // 5
+    m_stack->addWidget(m_auditLog);          // 6
+    m_stack->addWidget(m_settings);          // 7
+    m_stack->addWidget(m_debugConsole);      // 8
 
     // ── Splitter ─────────────────────────────────────────────────────────────
     m_splitter = new QSplitter(Qt::Horizontal, this);
@@ -166,6 +256,8 @@ void MainWindow::setupUI()
 
     // Propagate settings
     connect(m_settings, &SettingsWidget::settingsSaved, this, [this](const AppConfig&) {
+        m_db->setQualityThreshold(m_cfg.qualityThreshold);
+        syncLocalApi();
         onStatusMessage("Settings saved.");
         onRefreshRequested();
     });
@@ -179,6 +271,8 @@ void MainWindow::setupNavigation()
         { "🗺  Dashboard"           },
         { "📋  Crime Events"        },
         { "📊  Analytics"           },
+        { "📁  Cases"               },
+        { "🕸  Network"             },
         { "🔍  Investigative Leads" },
         { "📜  Audit Log"           },
         { "⚙  Settings"            },
@@ -221,6 +315,10 @@ void MainWindow::setupMenuBar()
     importAct->setShortcut(QKeySequence("Ctrl+I"));
     connect(importAct, &QAction::triggered, this, &MainWindow::onImportCsv);
 
+    QAction* sampleAct = fileMenu->addAction("Import &Sample Data");
+    sampleAct->setShortcut(QKeySequence("Ctrl+Shift+I"));
+    connect(sampleAct, &QAction::triggered, this, &MainWindow::onImportSampleData);
+
     QAction* fetchAct = fileMenu->addAction("Fetch &UK Police Data…");
     fetchAct->setShortcut(QKeySequence("Ctrl+U"));
     connect(fetchAct, &QAction::triggered, this, &MainWindow::onFetchUKPolice);
@@ -258,8 +356,8 @@ void MainWindow::setupMenuBar()
     QAction* consoleAct = debugMenu->addAction("Open Debug &Console");
     consoleAct->setShortcut(QKeySequence("Ctrl+Shift+D"));
     connect(consoleAct, &QAction::triggered, this, [this] {
-        m_navList->setCurrentRow(6);
-        m_stack->setCurrentIndex(6);
+        m_navList->setCurrentRow(8);
+        m_stack->setCurrentIndex(8);
     });
 
     // Help
@@ -267,13 +365,16 @@ void MainWindow::setupMenuBar()
 
     QAction* aboutAct = helpMenu->addAction("&About SENTINEL");
     connect(aboutAct, &QAction::triggered, this, [this] {
+        const QString version = QApplication::applicationVersion();
         QMessageBox::about(this,
             "About SENTINEL",
-            "<h2 style='color:#e94560;'>SENTINEL</h2>"
-            "<p><b>Crime Analytics Platform</b></p>"
-            "<p>Version 1.0 — Built with C++23 &amp; Qt6</p>"
-            "<p>Geospatial crime intelligence, NLP-driven event enrichment,<br>"
-            "Hawkes process modelling, and Bayesian evidence scoring.</p>");
+            QStringLiteral(
+                "<h2 style='color:#e94560;'>SENTINEL</h2>"
+                "<p><b>Crime Analytics Platform</b></p>"
+                "<p>Version %1 — Built with C++23 &amp; Qt6</p>"
+                "<p>Geospatial crime intelligence, NLP-driven event enrichment,<br>"
+                "Hawkes process modelling, and Bayesian evidence scoring.</p>")
+                .arg(version));
     });
 }
 
@@ -321,9 +422,26 @@ void MainWindow::setupStatusBar()
     m_statusLabel->setStyleSheet("color: #a0a8b8; padding-left: 8px;");
     statusBar()->addWidget(m_statusLabel, 1);
 
-    auto* versionLbl = new QLabel("SENTINEL v1.0", this);
+    auto* versionLbl = new QLabel(
+        QStringLiteral("SENTINEL v%1").arg(QApplication::applicationVersion()), this);
     versionLbl->setStyleSheet("color: #4a5568; padding-right: 8px;");
     statusBar()->addPermanentWidget(versionLbl);
+}
+
+void MainWindow::syncLocalApi()
+{
+    m_localApi.reset();
+    if (!m_cfg.enableLocalApi)
+        return;
+
+    m_localApi = std::make_unique<LocalApiServer>(m_db, static_cast<quint16>(m_cfg.localApiPort), this);
+    if (!m_localApi->start()) {
+        onStatusMessage(QStringLiteral("Local API failed to start on port %1").arg(m_cfg.localApiPort));
+        m_localApi.reset();
+        return;
+    }
+    onStatusMessage(QStringLiteral("Local API listening on http://127.0.0.1:%1")
+                        .arg(m_localApi->port()));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -334,11 +452,13 @@ void MainWindow::onNavItemSelected(int index)
 
     // Trigger lazy refresh when switching to heavy pages
     switch (index) {
-        case 0: m_dashboard->refresh();   break;
-        case 1: m_eventsTable->refresh(); break;
-        case 2: m_analytics->refresh();   break;
-        case 3: m_leads->refresh();       break;
-        case 4: m_auditLog->refresh();    break;
+        case 0: m_dashboard->refresh();         break;
+        case 1: m_eventsTable->refresh();       break;
+        case 2: m_analytics->refresh();         break;
+        case 3: m_caseWorkspace->refresh();     break;
+        case 4: m_coOffendingGraph->refresh();  break;
+        case 5: m_leads->refresh();             break;
+        case 6: m_auditLog->refresh();          break;
         default: break;
     }
 }
@@ -351,11 +471,13 @@ void MainWindow::onRefreshRequested()
     // Refresh whichever page is currently visible
     const int idx = m_stack->currentIndex();
     switch (idx) {
-        case 0: m_dashboard->refresh();   break;
-        case 1: m_eventsTable->refresh(); break;
-        case 2: m_analytics->refresh();   break;
-        case 3: m_leads->refresh();       break;
-        case 4: m_auditLog->refresh();    break;
+        case 0: m_dashboard->refresh();         break;
+        case 1: m_eventsTable->refresh();       break;
+        case 2: m_analytics->refresh();         break;
+        case 3: m_caseWorkspace->refresh();     break;
+        case 4: m_coOffendingGraph->refresh();  break;
+        case 5: m_leads->refresh();             break;
+        case 6: m_auditLog->refresh();          break;
         default: break;
     }
 
@@ -371,6 +493,50 @@ void MainWindow::onRefreshRequested()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+int MainWindow::insertEnrichedEvents(QVector<CrimeEvent> events, const QString& sourceLabel)
+{
+    IngestEnricher enricher(m_cfg);
+    const ImportSummary summary = enricher.prepare(events);
+
+    int inserted = 0;
+    for (const auto& ev : events) {
+        if (ev.qualityScore < m_cfg.qualityThreshold)
+            continue;
+        if (m_db->insertEvent(ev))
+            ++inserted;
+    }
+
+    QMessageBox::information(this, QStringLiteral("Import Complete"),
+        QStringLiteral("Source: <b>%1</b><br>"
+                       "Parsed: <b>%2</b><br>"
+                       "Avg quality: <b>%3</b><br>"
+                       "Passed quality (≥ %4): <b>%5</b><br>"
+                       "Quarantined: <b>%6</b><br>"
+                       "Inserted: <b>%7</b>")
+            .arg(sourceLabel)
+            .arg(summary.totalParsed)
+            .arg(summary.avgQuality, 0, 'f', 2)
+            .arg(m_cfg.qualityThreshold, 0, 'f', 2)
+            .arg(summary.passingCount)
+            .arg(summary.quarantinedCount)
+            .arg(inserted));
+
+    onStatusMessage(QStringLiteral("Imported %1 / %2 events (%3 quarantined).")
+                        .arg(inserted)
+                        .arg(summary.totalParsed)
+                        .arg(summary.quarantinedCount));
+
+    if (inserted > 0) {
+        constexpr int kAnalyticsPage = 2; // Dashboard=0, Events=1, Analytics=2, Cases=3, Network=4
+        m_navList->setCurrentRow(kAnalyticsPage);
+        m_stack->setCurrentIndex(kAnalyticsPage);
+        m_analytics->refresh();
+    }
+
+    return inserted;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 void MainWindow::onImportCsv()
 {
     const QString path = QFileDialog::getOpenFileName(
@@ -382,20 +548,36 @@ void MainWindow::onImportCsv()
     onStatusMessage(QString("Importing %1…").arg(path));
 
     try {
-        const QVector<CrimeEvent> events = CsvImporter::importFile(path);
-
-        int inserted = 0;
-        for (const auto& ev : events) {
-            if (m_db->insertEvent(ev)) ++inserted;
-        }
-
-        onStatusMessage(QString("Imported %1 / %2 events from CSV.").arg(inserted).arg(events.size()));
-        QMessageBox::information(this, "Import Complete",
-            QString("Imported <b>%1</b> events from:<br>%2").arg(inserted).arg(path));
+        QVector<CrimeEvent> events = CsvImporter::importFile(path);
+        insertEnrichedEvents(std::move(events), path);
         onRefreshRequested();
     } catch (const std::exception& ex) {
         onStatusMessage("Import failed.");
         QMessageBox::critical(this, "Import Error", QString("Failed to import CSV:\n%1").arg(ex.what()));
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+void MainWindow::onImportSampleData()
+{
+    const QString path = IngestEnricher::defaultSampleCsv();
+    if (!QFile::exists(path)) {
+        QMessageBox::warning(this, QStringLiteral("Sample Data Missing"),
+            QStringLiteral("Bundled sample CSV not found:<br>%1").arg(path));
+        return;
+    }
+
+    onStatusMessage(QStringLiteral("Importing bundled sample data…"));
+
+    try {
+        QVector<CrimeEvent> events = CsvImporter::importFile(
+            path, QStringLiteral("london_sample"));
+        insertEnrichedEvents(std::move(events), path);
+        onRefreshRequested();
+    } catch (const std::exception& ex) {
+        onStatusMessage(QStringLiteral("Sample import failed."));
+        QMessageBox::critical(this, QStringLiteral("Import Error"),
+            QStringLiteral("Failed to import sample CSV:\n%1").arg(ex.what()));
     }
 }
 
@@ -430,19 +612,11 @@ void MainWindow::onFetchUKPolice()
                     .arg(lat, 0, 'f', 4).arg(lon, 0, 'f', 4).arg(radius, 0, 'f', 1));
 
     try {
-        // Fetch last 12 months of data synchronously
         const QDateTime since = QDateTime::currentDateTimeUtc().addYears(-1);
         UKPoliceSource source(lat, lon, radius);
-        const QVector<CrimeEvent> events = source.fetchSync(since);
+        QVector<CrimeEvent> events = source.fetchSync(since);
 
-        int inserted = 0;
-        for (const auto& ev : events) {
-            if (m_db->insertEvent(ev)) ++inserted;
-        }
-
-        onStatusMessage(QString("Fetched %1 events from UK Police API.").arg(inserted));
-        QMessageBox::information(this, "Fetch Complete",
-            QString("Retrieved <b>%1</b> events from the UK Police open data API.").arg(inserted));
+        insertEnrichedEvents(std::move(events), QStringLiteral("UK Police API"));
         onRefreshRequested();
     } catch (const std::exception& ex) {
         onStatusMessage("UK Police fetch failed.");
@@ -559,20 +733,18 @@ void MainWindow::onExportBenchmarkMarkdown()
             return;
         }
 
-        // Build synthetic y_true / y_pred from events for demonstration
-        // (real benchmark would use held-out evaluation set)
-        QVector<double> yTrue, yPred;
-        for (int i = 0; i < events.size(); ++i) {
-            yTrue.append(1.0);
-            yPred.append(0.6 + 0.3 * ((i % 10) / 10.0));
-        }
-        // Add some negatives
-        for (int i = 0; i < events.size() / 2; ++i) {
-            yTrue.append(0.0);
-            yPred.append(0.1 + 0.2 * ((i % 5) / 5.0));
+        const GridPaiInputs paiInputs = buildKdeHoldoutPai(events);
+        if (paiInputs.yTrue.isEmpty()) {
+            QMessageBox::information(this, QStringLiteral("Insufficient Data"),
+                QStringLiteral("Need ≥50 train and ≥20 test geo-tagged events with dates "
+                               "for KDE holdout (Jan–Apr train, May+ test).<br>"
+                               "Train crimes: %1, test crimes: %2")
+                    .arg(paiInputs.trainCrimes)
+                    .arg(paiInputs.testCrimes));
+            return;
         }
 
-        const auto report = BenchmarkMetrics::fullReport(yTrue, yPred);
+        const auto report = BenchmarkMetrics::fullReport(paiInputs.yTrue, paiInputs.yPred);
         const QString md  = DataExporter::benchmarkToMarkdown(report);
         if (DataExporter::saveText(md, path)) {
             onStatusMessage(QString("Benchmark report saved to %1").arg(path));

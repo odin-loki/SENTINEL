@@ -1,0 +1,219 @@
+name: CI
+
+
+
+on:
+
+  push:
+
+    branches: [main, master]
+
+  pull_request:
+
+    branches: [main, master]
+
+
+
+concurrency:
+
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+
+  cancel-in-progress: true
+
+
+
+jobs:
+
+  linux:
+
+    name: Linux (ubuntu-latest, clang)
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 90
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+
+
+      - name: Install build dependencies
+
+        run: |
+
+          sudo apt-get update
+
+          sudo apt-get install -y --no-install-recommends \
+
+            clang qt6-base-dev qt6-charts-dev libqt6sql6-sqlite \
+
+            cmake ninja-build
+
+
+
+      - name: Configure (clang++)
+
+        run: |
+
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+
+            -DCMAKE_CXX_COMPILER=clang++ \
+
+            -DCMAKE_C_COMPILER=clang
+
+
+
+      - name: Build
+
+        run: cmake --build build -j"$(nproc)"
+
+
+
+      - name: Run unit tests (headless)
+
+        env:
+
+          QT_QPA_PLATFORM: offscreen
+
+        run: ctest --test-dir build --output-on-failure -j4
+
+
+
+      - name: Run real-data evaluation tests
+
+        env:
+
+          QT_QPA_PLATFORM: offscreen
+
+        run: |
+
+          set -o pipefail
+
+          chmod +x scripts/check_eval_thresholds.sh
+
+          ctest --test-dir build \
+
+            -R "test_local_datasets|test_real_data_evaluation" \
+
+            --output-on-failure -j1 \
+
+            --timeout 900 -V 2>&1 | tee /tmp/ctest-real.log
+
+          grep "EVAL:" /tmp/ctest-real.log > /tmp/eval.log
+
+          scripts/check_eval_thresholds.sh /tmp/eval.log
+
+
+
+  windows:
+
+    name: Windows (windows-latest, MinGW)
+
+    runs-on: windows-latest
+
+    timeout-minutes: 120
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+
+
+      - uses: actions/setup-python@v5
+
+        with:
+
+          python-version: "3.11"
+
+
+
+      - name: Install Qt 6.6.0 (MinGW) and build tools
+
+        run: |
+
+          pip install aqtinstall
+
+          aqt install-qt windows desktop 6.6.0 win64_mingw -m qtcharts qtsql
+
+          aqt install-tool windows desktop tools_mingw1310
+
+          aqt install-tool windows desktop tools_cmake tools_ninja
+
+
+
+      - name: Configure (MinGW)
+
+        shell: pwsh
+
+        run: |
+
+          $qt = "${{ github.workspace }}\6.6.0\mingw_64"
+
+          $mingw = "${{ github.workspace }}\Tools\mingw1310_64"
+
+          $cmake = "${{ github.workspace }}\Tools\CMake_64\bin"
+
+          $ninja = "${{ github.workspace }}\Tools\Ninja"
+
+          $env:PATH = "$ninja;$mingw\bin;$cmake;$qt\bin;$env:PATH"
+
+          cmake -B build -G Ninja `
+
+            -DCMAKE_BUILD_TYPE=Release `
+
+            "-DCMAKE_PREFIX_PATH=$qt" `
+
+            "-DCMAKE_CXX_COMPILER=$mingw/bin/g++.exe" `
+
+            "-DCMAKE_C_COMPILER=$mingw/bin/gcc.exe" `
+
+            "-DCMAKE_MAKE_PROGRAM=$ninja/ninja.exe"
+
+
+
+      - name: Build
+
+        shell: pwsh
+
+        run: |
+
+          $qt = "${{ github.workspace }}\6.6.0\mingw_64"
+
+          $mingw = "${{ github.workspace }}\Tools\mingw1310_64"
+
+          $cmake = "${{ github.workspace }}\Tools\CMake_64\bin"
+
+          $ninja = "${{ github.workspace }}\Tools\Ninja"
+
+          $env:PATH = "$ninja;$mingw\bin;$cmake;$qt\bin;$env:PATH"
+
+          cmake --build build -j
+
+
+
+      - name: Run unit tests (headless, skip slow real-data)
+
+        shell: pwsh
+
+        env:
+
+          QT_QPA_PLATFORM: offscreen
+
+        run: |
+
+          $qt = "${{ github.workspace }}\6.6.0\mingw_64"
+
+          $mingw = "${{ github.workspace }}\Tools\mingw1310_64"
+
+          $env:PATH = "$mingw\bin;$qt\bin;$env:PATH"
+
+          $env:QT_PLUGIN_PATH = "$qt\plugins"
+
+          ctest --test-dir build `
+
+            -E "test_local_datasets|test_real_data_evaluation" `
+
+            --output-on-failure -j4
+
+

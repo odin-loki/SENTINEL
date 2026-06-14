@@ -38,17 +38,34 @@ public:
     int      cachedHourCount() const { return m_cache.size(); }
     QDateTime lastFetchedAt()  const { return m_lastFetchedAt; }
 
+#ifdef SENTINEL_TESTING
+    void setNetworkManagerForTesting(QNetworkAccessManager* nam) { m_nam = nam; }
+#endif
+
 signals:
     void fetchComplete(int hours);
     void fetchError(const QString& msg);
 
+#ifdef SENTINEL_TESTING
+public slots:
+#else
 private slots:
+#endif
     void onReplyFinished(QNetworkReply* reply);
 
-private:
+#ifdef SENTINEL_TESTING
+public:
+    static double computeDiscomfort(double tempC);
+
     QNetworkAccessManager* m_nam;
     QMap<QDateTime, WeatherData> m_cache;   // key: truncated to hour
     QDateTime m_lastFetchedAt;              // set on every successful parse
-
+#else
+private:
     static double computeDiscomfort(double tempC);
+
+    QNetworkAccessManager* m_nam;
+    QMap<QDateTime, WeatherData> m_cache;   // key: truncated to hour
+    QDateTime m_lastFetchedAt;              // set on every successful parse
+#endif
 };

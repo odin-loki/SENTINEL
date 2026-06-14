@@ -25,6 +25,7 @@ private slots:
     void onBrowseDatabase();
     void onBrowseExport();
     void onAutoSave();
+    void onCheckForUpdates();
 
 private:
     void setupUI();
@@ -47,6 +48,9 @@ private:
     QSpinBox*       m_seriesMinEventsSpin;
     QDoubleSpinBox* m_seriesEpsKmSpin;
     QDoubleSpinBox* m_seriesEpsDaysSpin;
+    QDoubleSpinBox* m_seriesEpsBurglarySpin;
+    QDoubleSpinBox* m_seriesEpsTheftSpin;
+    QDoubleSpinBox* m_seriesEpsViolentSpin;
     QDoubleSpinBox* m_qualityThresholdSpin;
     QSpinBox*       m_forecastHorizonSpin;
 
@@ -68,6 +72,10 @@ private:
     QCheckBox* m_autoRefreshCheck;
     QSpinBox*  m_refreshIntervalSpin;
 
+    // Local REST API
+    QCheckBox* m_enableLocalApiCheck;
+    QSpinBox*  m_localApiPortSpin;
+
     // Database
     QLineEdit*   m_databasePathEdit;
     QPushButton* m_browseDbBtn;
@@ -82,4 +90,6 @@ private:
     QPushButton* m_saveBtn;
     QPushButton* m_resetBtn;
     QPushButton* m_resetDefaultsBtn;
+    QPushButton* m_checkUpdatesBtn;
+    bool         m_checkingUpdates = false;
 };

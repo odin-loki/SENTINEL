@@ -32,11 +32,18 @@ public:
     static QUrl buildFetchUrl(double lat, double lon, const QString& yyyyMm,
                               const QString& category = QStringLiteral("all-crime"));
 
-private slots:
+#ifdef SENTINEL_TESTING
+public:
+    static const QString BASE_URL;
+    static const QMap<QString, QString> CRIME_TYPE_MAP;
+
+    CrimeEvent parseRawEvent(const QJsonObject& raw) const;
+
+public slots:
     void onReplyFinished(QNetworkReply* reply);
     void processNextRequest();
 
-private:
+public:
     QNetworkAccessManager* m_nam;
     QTimer* m_rateLimitTimer;
     double m_lat, m_lon, m_radiusKm;
@@ -44,9 +51,23 @@ private:
     int m_fetchCount      = 0;
     int m_totalRequests   = 0;
     int m_inFlightRequests = 0;  // requests sent but not yet replied to
+#else
+private slots:
+    void onReplyFinished(QNetworkReply* reply);
+    void processNextRequest();
 
+private:
     static const QString BASE_URL;
     static const QMap<QString, QString> CRIME_TYPE_MAP;
 
     CrimeEvent parseRawEvent(const QJsonObject& raw) const;
+
+    QNetworkAccessManager* m_nam;
+    QTimer* m_rateLimitTimer;
+    double m_lat, m_lon, m_radiusKm;
+    QQueue<QUrl> m_pendingUrls;
+    int m_fetchCount      = 0;
+    int m_totalRequests   = 0;
+    int m_inFlightRequests = 0;  // requests sent but not yet replied to
+#endif
 };

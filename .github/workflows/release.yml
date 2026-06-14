@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Windows release
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Qt 6.6.0 (MinGW)
+        run: |
+          pip install aqtinstall
+          aqt install-qt windows desktop 6.6.0 win64_mingw -m qtcharts qtsql
+          aqt install-tool windows desktop tools_mingw1310
+          aqt install-tool windows desktop tools_cmake tools_ninja
+
+      - name: Derive version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -match '^v(.+)$') { $ver = $Matches[1] } else { $ver = $tag }
+          "version=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Release version: $ver"
+
+      - name: Install NSIS
+        run: choco install nsis -y
+
+      - name: Build and package Windows release
+        shell: pwsh
+        env:
+          SIGN_CERT: ${{ secrets.SIGN_CERT }}
+          SIGN_PASSWORD: ${{ secrets.SIGN_PASSWORD }}
+        run: |
+          $qt = "${{ github.workspace }}\6.6.0\mingw_64"
+          $mingw = "${{ github.workspace }}\Tools\mingw1310_64"
+          $cmake = "${{ github.workspace }}\Tools\CMake_64\bin"
+          $ninja = "${{ github.workspace }}\Tools\Ninja"
+          $ver = "${{ steps.version.outputs.version }}"
+          $env:PATH = "$ninja;$mingw\bin;$cmake;$qt\bin;$env:PATH"
+          $env:QT_PLUGIN_PATH = "$qt\plugins"
+          $env:QT_QPA_PLATFORM = "offscreen"
+          cmake -S . -B build -G "MinGW Makefiles" `
+            -DCMAKE_PREFIX_PATH="$qt" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_CXX_COMPILER="$mingw\bin\g++.exe" `
+            -DCMAKE_RC_COMPILER="$mingw\bin\windres.exe" `
+            -DSENTINEL_VERSION="$ver"
+          cmake --build build -j 4
+          ctest --test-dir build -E "test_local_datasets|test_real_data_evaluation" --output-on-failure -j4
+          if ($LASTEXITCODE -ne 0) { throw "ctest failed" }
+          cmake --build build --target sentinel -j 4
+          & packaging/windows/deploy_portable.ps1 `
+            -BuildDir build `
+            -QtPath $qt `
+            -Version $ver `
+            -InstallRoot "${{ github.workspace }}/packaging/pkg"
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            dist/SENTINEL-*-win64-portable.zip
+            dist/SENTINEL-*-win64-setup.exe
+          if-no-files-found: error
+
+  build-linux:
+    name: Linux release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang lld \
+            qt6-base-dev qt6-charts-dev libqt6sql6-sqlite \
+            cmake ninja-build dpkg-dev
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          ver="${tag#v}"
+          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+          echo "Release version: ${ver}"
+
+      - name: Build Linux tarball
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SENTINEL_VERSION: ${{ steps.version.outputs.version }}
+          CC: clang
+          CXX: clang++
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          chmod +x packaging/linux/build_release.sh
+          ./packaging/linux/build_release.sh
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: |
+            dist/SENTINEL-*-linux-x86_64.tar.gz
+            dist/*.deb
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          ver="${tag#v}"
+          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SENTINEL ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          files: |
+            release-artifacts/SENTINEL-*-win64-portable.zip
+            release-artifacts/SENTINEL-*-win64-setup.exe
+            release-artifacts/SENTINEL-*-linux-x86_64.tar.gz
+            release-artifacts/*.deb

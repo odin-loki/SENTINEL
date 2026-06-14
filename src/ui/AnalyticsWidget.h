@@ -14,10 +14,10 @@
 #include "core/Database.h"
 #include "core/AppConfig.h"
 #include "benchmark/BenchmarkMetrics.h"
-#include "benchmark/CalibrationAnalyser.h"
 #include "models/PoissonBaseline.h"
 #include "ui/TemporalHeatmapWidget.h"
 #include "ui/MapWidget.h"
+#include "ui/CalibrationDashboardWidget.h"
 #include "models/KDEHotspot.h"
 
 class AnalyticsWidget : public QWidget {
@@ -29,7 +29,6 @@ public:
 private slots:
     void onChartTypeChanged(int index);
     void runBenchmark();
-    void runCalibration();
 
 private:
     void setupUI();
@@ -60,9 +59,7 @@ private:
     QPushButton*  m_runBenchmarkBtn = nullptr;
 
     // Calibration tab
-    QChartView*  m_calibView        = nullptr;
-    QPushButton* m_runCalibBtn      = nullptr;
-    QLabel*      m_calibSummaryLbl  = nullptr;
+    CalibrationDashboardWidget* m_calibDashboard = nullptr;
 
     // Heatmap tab
     TemporalHeatmapWidget* m_heatmap = nullptr;
