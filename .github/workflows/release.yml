@@ -16,15 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Qt 6.6.0 (MSVC)
+      - name: Install Qt 6.8.3 (MSVC 2022)
         uses: jurplel/install-qt-action@v4
         with:
-          version: "6.6.0"
+          version: "6.8.3"
           host: windows
           target: desktop
-          arch: win64_msvc2019_64
+          arch: win64_msvc2022_64
           modules: qtcharts
-          tools: tools_cmake,tools_ninja
           aqtversion: "==3.3.*"
 
       - name: Derive version from tag
@@ -39,8 +38,6 @@ jobs:
       - name: Install NSIS
         run: choco install nsis -y
 
-      - uses: ilammy/msvc-dev-cmd@v1
-
       - name: Build and package Windows release
         shell: pwsh
         env:
@@ -52,16 +49,13 @@ jobs:
           $ver = "${{ steps.version.outputs.version }}"
           $env:QT_PLUGIN_PATH = "$qt\plugins"
           $env:QT_QPA_PLATFORM = "offscreen"
-          cmake -S . -B $buildDir -G Ninja `
-            -DCMAKE_BUILD_TYPE=Release `
+          cmake -S . -B $buildDir -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_PREFIX_PATH="$qt" `
-            -DCMAKE_C_COMPILER=cl `
-            -DCMAKE_CXX_COMPILER=cl `
             -DSENTINEL_VERSION="$ver"
-          cmake --build $buildDir -j 4
-          ctest --test-dir $buildDir -E "test_local_datasets|test_real_data_evaluation" --output-on-failure -j4
+          cmake --build $buildDir --config Release -j 4
+          ctest --test-dir $buildDir -C Release -E "test_local_datasets|test_real_data_evaluation" --output-on-failure -j4
           if ($LASTEXITCODE -ne 0) { throw "ctest failed" }
-          cmake --build $buildDir --target sentinel -j 4
+          cmake --build $buildDir --config Release --target sentinel -j 4
           & packaging/windows/deploy_portable.ps1 `
             -BuildDir $buildDir `
             -QtPath $qt `

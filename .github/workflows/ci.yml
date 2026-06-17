@@ -120,20 +120,15 @@ jobs:
 
 
 
-      - name: Install Qt 6.6.0 (MSVC)
+      - name: Install Qt 6.8.3 (MSVC 2022)
         uses: jurplel/install-qt-action@v4
         with:
-          version: "6.6.0"
+          version: "6.8.3"
           host: windows
           target: desktop
-          arch: win64_msvc2019_64
+          arch: win64_msvc2022_64
           modules: qtcharts
-          tools: tools_cmake,tools_ninja
           aqtversion: "==3.3.*"
-
-
-
-      - uses: ilammy/msvc-dev-cmd@v1
 
 
 
@@ -141,22 +136,11 @@ jobs:
 
         shell: pwsh
 
-        env:
-          QT_ROOT_DIR: ${{ env.QT_ROOT_DIR }}
-
         run: |
 
-          $qt = $env:QT_ROOT_DIR
+          cmake -B build-msvc-release -G "Visual Studio 17 2022" -A x64 `
 
-          cmake -B build-msvc-release -G Ninja `
-
-            -DCMAKE_BUILD_TYPE=Release `
-
-            "-DCMAKE_PREFIX_PATH=$qt" `
-
-            "-DCMAKE_CXX_COMPILER=cl" `
-
-            "-DCMAKE_C_COMPILER=cl"
+            "-DCMAKE_PREFIX_PATH=$env:QT_ROOT_DIR"
 
 
 
@@ -166,7 +150,7 @@ jobs:
 
         run: |
 
-          cmake --build build-msvc-release -j
+          cmake --build build-msvc-release --config Release -j
 
 
 
@@ -182,7 +166,7 @@ jobs:
 
           $env:QT_PLUGIN_PATH = "$env:QT_ROOT_DIR\plugins"
 
-          ctest --test-dir build-msvc-release `
+          ctest --test-dir build-msvc-release -C Release `
 
             -E "test_local_datasets|test_real_data_evaluation" `
 
