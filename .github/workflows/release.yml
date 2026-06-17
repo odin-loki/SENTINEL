@@ -22,8 +22,8 @@ jobs:
 
       - name: Install Qt 6.6.0 (MinGW)
         run: |
-          pip install aqtinstall
-          aqt install-qt windows desktop 6.6.0 win64_mingw -m qtcharts qtsql
+          pip install "aqtinstall>=3.3.0"
+          aqt install-qt windows desktop 6.6.0 win64_mingw -m qtcharts
           aqt install-tool windows desktop tools_mingw1310
           aqt install-tool windows desktop tools_cmake tools_ninja
 

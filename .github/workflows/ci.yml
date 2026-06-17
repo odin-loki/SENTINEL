@@ -134,7 +134,7 @@ jobs:
 
           pip install aqtinstall
 
-          aqt install-qt windows desktop 6.6.0 win64_mingw -m qtcharts qtsql
+          aqt install-qt windows desktop 6.6.0 win64_mingw -m qtcharts
 
           aqt install-tool windows desktop tools_mingw1310
 
