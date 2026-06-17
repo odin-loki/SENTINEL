@@ -1,5 +1,6 @@
 // Deep audit iteration 16 — DataQualityScorer passRate, batch scoring, thresholds
 #include <QTest>
+#include <QTimeZone>
 #include "ingest/DataQualityScorer.h"
 #include "core/CrimeEvent.h"
 

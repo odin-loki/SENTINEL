@@ -11,6 +11,7 @@
 #include <QDate>
 #include <QTime>
 #include <QDateTime>
+#include <QTimeZone>
 #include <QIODevice>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -84,7 +85,7 @@ static CrimeEvent makeHighQuality(const QString& id,
     ev.eventId    = id;
     ev.source     = source;
     ev.crimeType  = QStringLiteral("burglary");
-    ev.occurredAt = QDateTime(QDate(2024, 6, 15), QTime(14, 30, 0), QTimeZone::UTC);
+    ev.occurredAt = QDateTime(QDate(2024, 6, 15), QTime(14, 30, 0), QTimeZone::utc());
     ev.lat        = 51.5074;
     ev.lon        = -0.1278;
     ev.locationRaw = QStringLiteral("On or near High Street");
@@ -433,7 +434,7 @@ private slots:
         ws.onReplyFinished(reply);
         QCoreApplication::processEvents();   // let deleteLater() clean up
 
-        const QDateTime dt(QDate(2024, 6, 15), QTime(14, 0, 0), QTimeZone::UTC);
+        const QDateTime dt(QDate(2024, 6, 15), QTime(14, 0, 0), QTimeZone::utc());
         const auto result = ws.dataAt(dt);
 
         QVERIFY2(result.has_value(), "Expected dataAt() to return a value after parsing");
@@ -466,7 +467,7 @@ private slots:
         ws.onReplyFinished(reply);
         QCoreApplication::processEvents();
 
-        const QDateTime dt(QDate(2024, 1, 10), QTime(9, 0, 0), QTimeZone::UTC);
+        const QDateTime dt(QDate(2024, 1, 10), QTime(9, 0, 0), QTimeZone::utc());
         const auto result = ws.dataAt(dt);
 
         QVERIFY2(result.has_value(), "Expected a WeatherData entry even with missing arrays");
@@ -504,7 +505,7 @@ private slots:
         ws.onReplyFinished(reply);
         QCoreApplication::processEvents();
 
-        const QDateTime dt(QDate(2024, 3, 20), QTime(10, 0, 0), QTimeZone::UTC);
+        const QDateTime dt(QDate(2024, 3, 20), QTime(10, 0, 0), QTimeZone::utc());
 
         // First and second lookups must return identical values (cached)
         const auto result1 = ws.dataAt(dt);
@@ -522,7 +523,7 @@ private slots:
         QCOMPARE(result1->isDay,       result2->isDay);
 
         // Querying a different datetime must still return nullopt (not in cache)
-        const QDateTime other(QDate(2024, 3, 21), QTime(10, 0, 0), QTimeZone::UTC);
+        const QDateTime other(QDate(2024, 3, 21), QTime(10, 0, 0), QTimeZone::utc());
         QVERIFY(!ws.dataAt(other).has_value());
     }
 

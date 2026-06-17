@@ -1,6 +1,7 @@
 // test_local_datasets.cpp — integration tests against curated real-world datasets
 // stored under sentinel/data/ (see data/README.md and data/manifest.json).
 #include <QTest>
+#include <QTimeZone>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>

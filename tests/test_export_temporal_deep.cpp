@@ -1,6 +1,7 @@
 // test_export_temporal_deep.cpp — deep audit tests for DataExporter,
 // LeadReportGenerator, and TemporalFeatures (iteration 7).
 #include <QTest>
+#include <QTimeZone>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>

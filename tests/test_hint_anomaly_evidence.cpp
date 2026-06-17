@@ -1,6 +1,7 @@
 // test_hint_anomaly_evidence.cpp — Iteration 6 deep tests for HintEngine,
 // AnomalyDetector, and EvidenceScorer.
 #include <QTest>
+#include <QTimeZone>
 #include <QMap>
 #include <cmath>
 #include <algorithm>

@@ -2,6 +2,7 @@
 // Validates SeriesDetector DBSCAN correctness: known clusters detected,
 // noise points ignored, MO Jaccard similarity, link probability bounds.
 #include <QTest>
+#include <QTimeZone>
 #include "models/SeriesDetector.h"
 #include "core/CrimeEvent.h"
 

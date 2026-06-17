@@ -2,6 +2,7 @@
 // extended tabs (Benchmark/Calibration/Heat Map/Map), run actions, period filters.
 
 #include <QTest>
+#include <QTimeZone>
 #include <QApplication>
 #include <QLabel>
 #include <QComboBox>

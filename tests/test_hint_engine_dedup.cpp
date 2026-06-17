@@ -2,6 +2,7 @@
 // Tests HintEngine lead generation, de-duplication, prioritisation and
 // provenance, covering the full input structure.
 #include <QTest>
+#include <QTimeZone>
 #include "inference/HintEngine.h"
 #include "core/CrimeEvent.h"
 

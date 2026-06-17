@@ -2,6 +2,7 @@
 // Deep tests for HintEngine: lead generation from series, MO, geographic profile,
 // anomaly signal, and network leads.
 #include <QTest>
+#include <QTimeZone>
 #include "inference/HintEngine.h"
 #include "core/CrimeEvent.h"
 

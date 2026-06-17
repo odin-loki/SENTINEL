@@ -2,6 +2,7 @@
 // Tests EnsemblePredictor post-calibration: probability remapping,
 // credible interval preservation, and calibration data quality.
 #include <QTest>
+#include <QTimeZone>
 #include "models/EnsemblePredictor.h"
 #include "models/PoissonBaseline.h"
 #include <cmath>

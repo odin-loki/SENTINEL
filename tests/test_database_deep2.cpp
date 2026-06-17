@@ -1,4 +1,5 @@
 #include <QTest>
+#include <QTimeZone>
 #include <QApplication>
 #include <QTemporaryFile>
 #include <QUuid>

@@ -1,5 +1,6 @@
 // test_data_quality_deep2.cpp — Second-pass deep tests for DataQualityScorer
 #include <QTest>
+#include <QTimeZone>
 #include "ingest/DataQualityScorer.h"
 #include "core/CrimeEvent.h"
 #include <cmath>

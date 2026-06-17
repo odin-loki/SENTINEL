@@ -1,6 +1,7 @@
 // test_events_table_deep7.cpp — Deep audit iteration 30: EventsTableWidget
 // crime type filter, refresh button, row count after insert, model non-null.
 #include <QTest>
+#include <QTimeZone>
 #include <QApplication>
 #include <QComboBox>
 #include <QPushButton>

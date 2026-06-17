@@ -1,6 +1,7 @@
 // test_database_stress.cpp
 // Iteration 6 audit: schema, CRUD, filters, leads, audit, stats, and AppConfig.
 #include <QTest>
+#include <QTimeZone>
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>

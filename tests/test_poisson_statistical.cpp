@@ -2,6 +2,7 @@
 // Statistical correctness tests for PoissonBaseline: PMF, PPF, NegBin PMF,
 // temporal bucket prediction, zero-count zones, and overdispersion handling.
 #include <QTest>
+#include <QTimeZone>
 #include "models/PoissonBaseline.h"
 #include <cmath>
 #include <numeric>

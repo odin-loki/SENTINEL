@@ -2,6 +2,7 @@
 // RiskForecaster multi-zone, alert levels, horizon, zone forecast
 // and setAlertThresholds tests.
 #include <QTest>
+#include <QTimeZone>
 #include "models/RiskForecaster.h"
 #include "core/CrimeEvent.h"
 

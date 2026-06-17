@@ -2,6 +2,7 @@
 // Deep tests for DataQualityScorer: completeness, spatial/temporal precision,
 // quarantine logic, passRate, and source reliability.
 #include <QTest>
+#include <QTimeZone>
 #include "ingest/DataQualityScorer.h"
 #include "core/CrimeEvent.h"
 

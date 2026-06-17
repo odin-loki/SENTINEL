@@ -2,6 +2,7 @@
 // Tests LeadReportGenerator: Markdown, HTML, plaintext output quality,
 // confidence stats, provenance formatting and file save.
 #include <QTest>
+#include <QTimeZone>
 #include <QTemporaryFile>
 #include <QFile>
 #include "inference/LeadReportGenerator.h"

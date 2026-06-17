@@ -2,6 +2,7 @@
 // Deep tests for Database: schema versioning, CRUD, query filters,
 // lead insertion, audit log, and stats helpers.
 #include <QTest>
+#include <QTimeZone>
 #include "core/Database.h"
 #include "core/AppConfig.h"
 #include "core/CrimeEvent.h"

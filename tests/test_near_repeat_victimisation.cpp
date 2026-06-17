@@ -2,6 +2,7 @@
 // Tests near-repeat victimisation patterns using SeriesDetector and
 // RiskForecaster: elevated risk within 400m/14 days of a prior crime.
 #include <QTest>
+#include <QTimeZone>
 #include "models/SeriesDetector.h"
 #include "models/RiskForecaster.h"
 #include "core/CrimeEvent.h"

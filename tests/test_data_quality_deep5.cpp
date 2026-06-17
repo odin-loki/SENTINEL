@@ -3,6 +3,7 @@
 // aggregate score range, temporal precision, and spatial precision.
 
 #include <QTest>
+#include <QTimeZone>
 #include <cmath>
 
 #include "ingest/DataQualityScorer.h"

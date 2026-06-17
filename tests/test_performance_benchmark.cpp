@@ -6,6 +6,7 @@
 #include <QVector>
 #include <QPair>
 #include <QDateTime>
+#include <QTimeZone>
 #include <QString>
 #include <cstdlib>
 #include <cmath>

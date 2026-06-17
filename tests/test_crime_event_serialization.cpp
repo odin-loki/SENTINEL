@@ -2,6 +2,7 @@
 // Tests CrimeEvent JSON serialization via DataExporter and Database roundtrip.
 // Validates field preservation across the full data pipeline.
 #include <QTest>
+#include <QTimeZone>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>

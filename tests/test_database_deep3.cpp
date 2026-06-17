@@ -1,6 +1,7 @@
 // test_database_deep3.cpp — Iteration 12 deep audit: WAL mode, prepared-statement
 // safety, batch-insert transaction, and schema-migration idempotency.
 #include <QTest>
+#include <QTimeZone>
 #include <QApplication>
 #include <QTemporaryFile>
 #include <QSqlQuery>

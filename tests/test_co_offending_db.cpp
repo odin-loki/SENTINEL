@@ -1,5 +1,6 @@
 // test_co_offending_db.cpp — CoOffendingGraphWidget loadFromDatabase headless test
 #include <QTest>
+#include <QTimeZone>
 #include <QApplication>
 #include <QJsonObject>
 #include <memory>

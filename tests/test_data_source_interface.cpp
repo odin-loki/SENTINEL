@@ -2,6 +2,7 @@
 // Tests for DataSource abstract interface via a minimal concrete mock
 // implementation. Verifies signals, healthCheck, and async fetch contract.
 #include <QTest>
+#include <QTimeZone>
 #include <QSignalSpy>
 #include "ingest/DataSource.h"
 

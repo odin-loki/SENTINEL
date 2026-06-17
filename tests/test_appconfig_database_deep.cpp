@@ -2,6 +2,7 @@
 // and SettingsWidget (iteration 4).
 
 #include <QTest>
+#include <QTimeZone>
 #include <QApplication>
 #include <QSqlDatabase>
 #include <QSqlQuery>

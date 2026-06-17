@@ -4,6 +4,7 @@
 // No live network calls — all API data is mocked as JSON/CSV strings.
 
 #include <QTest>
+#include <QTimeZone>
 #include <QCoreApplication>
 #include <QSignalSpy>
 #include <QFile>

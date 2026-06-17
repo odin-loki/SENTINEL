@@ -1,6 +1,7 @@
 // test_temporal_features_edge.cpp
 // Edge case and seasonal pattern tests for TemporalFeatures.
 #include <QTest>
+#include <QTimeZone>
 #include "models/TemporalFeatures.h"
 #include <cmath>
 

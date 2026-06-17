@@ -1,6 +1,7 @@
 // test_provenance_quality_nlp.cpp
 // Iteration 6 audit: ProvenanceLog, DataQualityScorer, CrimeClassifier, MOExtractor
 #include <QTest>
+#include <QTimeZone>
 #include <cmath>
 #include "audit/ProvenanceLog.h"
 #include "ingest/DataQualityScorer.h"

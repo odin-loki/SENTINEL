@@ -1,6 +1,7 @@
 // test_data_exporter_roundtrip.cpp
 // Tests DataExporter CSV/JSON roundtrip fidelity and Markdown output quality.
 #include <QTest>
+#include <QTimeZone>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>

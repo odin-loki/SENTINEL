@@ -1,6 +1,7 @@
 // test_crime_event_deep2.cpp — Iteration 13: CrimeEvent defaults, optional lat/lon,
 // and quality score range.
 #include <QTest>
+#include <QTimeZone>
 #include <cmath>
 #include "core/CrimeEvent.h"
 

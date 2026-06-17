@@ -3,6 +3,7 @@
 // MO matches, geo profiles, anomaly signals, network leads, reranking,
 // and contradiction detection.
 #include <QTest>
+#include <QTimeZone>
 #include "inference/HintEngine.h"
 #include "core/CrimeEvent.h"
 #include <optional>

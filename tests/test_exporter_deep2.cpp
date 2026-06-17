@@ -1,3 +1,4 @@
+#include <QTimeZone>
 #include <QtTest>
 #include <QJsonDocument>
 #include <QJsonArray>

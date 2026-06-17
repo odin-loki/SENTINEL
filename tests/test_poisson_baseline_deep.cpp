@@ -1,6 +1,7 @@
 // test_poisson_baseline_deep.cpp
 // Deep tests for PoissonBaseline parameter estimation, PMF, PPF, and predictions.
 #include <QTest>
+#include <QTimeZone>
 #include "models/PoissonBaseline.h"
 #include <cmath>
 

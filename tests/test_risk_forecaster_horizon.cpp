@@ -1,6 +1,7 @@
 // test_risk_forecaster_horizon.cpp
 // Multi-horizon accuracy and boundary tests for RiskForecaster.
 #include <QTest>
+#include <QTimeZone>
 #include "models/RiskForecaster.h"
 #include "core/CrimeEvent.h"
 

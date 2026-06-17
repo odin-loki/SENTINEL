@@ -1,6 +1,7 @@
 // test_series_detector_deep6.cpp — Deep audit iteration 21: SeriesDetector
 // Verifies: dominant type, MO Jaccard, link caps, noise exclusion, CrimeEvent path, series IDs.
 
+#include <QTimeZone>
 #include <QtTest/QtTest>
 #include "models/SeriesDetector.h"
 #include "core/CrimeEvent.h"

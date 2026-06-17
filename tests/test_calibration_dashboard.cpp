@@ -1,5 +1,6 @@
 // test_calibration_dashboard.cpp — CalibrationDashboardWidget headless smoke test
 #include <QTest>
+#include <QTimeZone>
 #include <QApplication>
 #include <QPushButton>
 #include <QtCharts/QChartView>

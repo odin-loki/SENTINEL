@@ -2,6 +2,7 @@
 // DataQualityScorer boundary tests: minimal events, near-threshold scoring,
 // passRate computation, and source reliability integration.
 #include <QTest>
+#include <QTimeZone>
 #include "ingest/DataQualityScorer.h"
 #include "core/CrimeEvent.h"
 

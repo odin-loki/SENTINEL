@@ -2,6 +2,7 @@
 // Deep tests for RiskForecaster: fit, forecast horizon, alert levels,
 // escalation detection, and multi-zone support.
 #include <QTest>
+#include <QTimeZone>
 #include "models/RiskForecaster.h"
 #include "core/CrimeEvent.h"
 #include <cmath>

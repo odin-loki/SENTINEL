@@ -2,6 +2,7 @@
 // Tests that BayesianHierarchical model fits correctly, posteriors are valid,
 // shrinkage works, and predictions are well-calibrated.
 #include <QTest>
+#include <QTimeZone>
 #include "models/BayesianHierarchical.h"
 #include "core/CrimeEvent.h"
 

@@ -2,6 +2,7 @@
 // Quantitative evaluation of SENTINEL pipeline stages on curated real-world data.
 // See docs/REAL_DATA_EVALUATION.md for the written report.
 #include <QTest>
+#include <QTimeZone>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>

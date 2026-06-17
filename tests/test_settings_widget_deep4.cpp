@@ -81,7 +81,7 @@ private slots:
         QCOMPARE(cfg.refreshIntervalSeconds, 120);
     }
 
-    void testDefaultLocationNotAutoSavedUntilManualSave()
+    void testDefaultLocationAutoSavedOnEdit()
     {
         AppConfig cfg;
         cfg.databasePath  = QStringLiteral(":memory:");
@@ -94,12 +94,14 @@ private slots:
         QDoubleSpinBox* lonSpin = nullptr;
         QDoubleSpinBox* radiusSpin = nullptr;
         for (auto* spin : widget.findChildren<QDoubleSpinBox*>()) {
-            if (spin->suffix().contains(QStringLiteral("km")))
+            if (spin->suffix().contains(QStringLiteral("km")) && spin->decimals() == 1) {
                 radiusSpin = spin;
-            else if (spin->maximum() <= 90.0)
-                latSpin = spin;
-            else if (spin->maximum() <= 180.0)
-                lonSpin = spin;
+            } else if (spin->suffix() == QStringLiteral("°")) {
+                if (spin->maximum() <= 90.0)
+                    latSpin = spin;
+                else
+                    lonSpin = spin;
+            }
         }
         QVERIFY(latSpin != nullptr);
         QVERIFY(lonSpin != nullptr);
@@ -110,13 +112,9 @@ private slots:
         radiusSpin->setValue(12.0);
         QApplication::processEvents();
 
-        // BUG SettingsWidget.cpp:491-507 — geographic defaults have no onAutoSave hook.
-        if (cfg.defaultLat != 51.5074 || cfg.defaultLon != -0.1278 || cfg.defaultRadius != 5.0) {
-            QWARN("BUG SettingsWidget.cpp:491-507: default lat/lon/radius not auto-saved");
-        }
-        QCOMPARE(cfg.defaultLat, 51.5074);
-        QCOMPARE(cfg.defaultLon, -0.1278);
-        QCOMPARE(cfg.defaultRadius, 5.0);
+        QCOMPARE(cfg.defaultLat, 48.8566);
+        QCOMPARE(cfg.defaultLon, 2.3522);
+        QCOMPARE(cfg.defaultRadius, 12.0);
     }
 
     void testApiKeysNotAutoSavedUntilManualSave()

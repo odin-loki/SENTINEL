@@ -1,6 +1,7 @@
 // test_database_deep4.cpp — Iteration 15 deep audit: insert/query roundtrip,
 // migration idempotency, and event count accuracy.
 #include <QTest>
+#include <QTimeZone>
 #include <QSqlQuery>
 #include <QSqlDatabase>
 #include <QDir>

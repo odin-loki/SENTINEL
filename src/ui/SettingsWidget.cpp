@@ -622,6 +622,9 @@ void SettingsWidget::loadFromConfig()
     const QSignalBlocker blockRefreshInterval(m_refreshIntervalSpin);
     const QSignalBlocker blockLocalApi(m_enableLocalApiCheck);
     const QSignalBlocker blockLocalApiPort(m_localApiPortSpin);
+    const QSignalBlocker blockDefaultLat(m_defaultLatSpin);
+    const QSignalBlocker blockDefaultLon(m_defaultLonSpin);
+    const QSignalBlocker blockDefaultRadius(m_defaultRadiusSpin);
 
     m_openWeatherKeyEdit->setText(m_cfg.openWeatherKey);
     m_socrataTokenEdit->setText(m_cfg.socrataToken);

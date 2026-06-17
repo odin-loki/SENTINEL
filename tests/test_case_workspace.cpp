@@ -1,5 +1,6 @@
 // test_case_workspace.cpp — Phase 2 headless CaseWorkspaceWidget test
 #include <QTest>
+#include <QTimeZone>
 #include <QApplication>
 #include <QLineEdit>
 #include <QTableWidget>

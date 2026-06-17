@@ -2,6 +2,7 @@
 // Deep tests for SeriesDetector: DBSCAN clustering, Jaccard, linkProbability,
 // and the CrimeEvent convenience overload.
 #include <QTest>
+#include <QTimeZone>
 #include "models/SeriesDetector.h"
 #include "core/CrimeEvent.h"
 #include <cmath>

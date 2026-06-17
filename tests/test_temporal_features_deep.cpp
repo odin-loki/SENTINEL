@@ -2,6 +2,7 @@
 // Validates TemporalFeatures cyclical encoding, lunar phase, night/dark detection,
 // payday distance, and edge cases.
 #include <QTest>
+#include <QTimeZone>
 #include "models/TemporalFeatures.h"
 #include <cmath>
 

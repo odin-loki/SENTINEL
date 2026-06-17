@@ -13,6 +13,7 @@
 #include <QFont>
 #include <QHeaderView>
 #include <QDateTime>
+#include <QTimeZone>
 #include <algorithm>
 
 // The 18 evidence types shown in the scorer panel (display labels)

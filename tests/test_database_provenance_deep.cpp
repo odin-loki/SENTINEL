@@ -1,6 +1,7 @@
 // test_database_provenance_deep.cpp
 // Iteration 8 deep audit tests for Database and ProvenanceLog.
 #include <QTest>
+#include <QTimeZone>
 #include <QSqlQuery>
 #include <QSqlDatabase>
 #include <QJsonDocument>

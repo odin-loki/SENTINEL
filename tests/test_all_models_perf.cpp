@@ -26,6 +26,7 @@
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QDateTime>
+#include <QTimeZone>
 #include <QVector>
 #include <QPair>
 #include <QString>
@@ -83,7 +84,7 @@ static QString randomMO(int wordCount = 6) {
 }
 
 static QDateTime baseTime() {
-    return QDateTime(QDate(2024, 1, 1), QTime(0, 0, 0), QTimeZone::UTC);
+    return QDateTime(QDate(2024, 1, 1), QTime(0, 0, 0), QTimeZone::utc());
 }
 
 // Build N CrimeEvents with realistic spatial/temporal scatter

@@ -3,6 +3,7 @@
 // DataQualityScorer. All offline/mocked — no live network calls.
 
 #include <QTest>
+#include <QTimeZone>
 #include <QCoreApplication>
 #include <QSignalSpy>
 #include <QJsonObject>

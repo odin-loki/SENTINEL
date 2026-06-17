@@ -2,6 +2,7 @@
 // Database schema migration tests: current version, migrateSchema,
 // read/write integrity after migration, and CRUD after schema creation.
 #include <QTest>
+#include <QTimeZone>
 #include <QUuid>
 #include "core/Database.h"
 #include "core/AppConfig.h"

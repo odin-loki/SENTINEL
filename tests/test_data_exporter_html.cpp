@@ -1,6 +1,7 @@
 // test_data_exporter_html.cpp
 // Tests the HTML export methods of DataExporter.
 #include <QTest>
+#include <QTimeZone>
 #include "core/DataExporter.h"
 #include "core/CrimeEvent.h"
 

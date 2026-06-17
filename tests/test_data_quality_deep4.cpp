@@ -1,6 +1,7 @@
 // test_data_quality_deep4.cpp — Iteration 19 deep audit: flat coord fallback,
 // location text variants, precision labels, alias sources, and quarantine edge.
 #include <QTest>
+#include <QTimeZone>
 #include <cmath>
 
 #include "ingest/DataQualityScorer.h"

@@ -2,6 +2,7 @@
 // BayesianHierarchical posterior update, shrinkage, partial pooling,
 // and credible interval tests.
 #include <QTest>
+#include <QTimeZone>
 #include "models/BayesianHierarchical.h"
 #include "core/CrimeEvent.h"
 #include <cmath>

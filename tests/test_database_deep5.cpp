@@ -1,6 +1,7 @@
 // test_database_deep5.cpp — Iteration 19 deep audit: query boundary bugs,
 // update semantics, lead/audit round-trips, and stats edge cases.
 #include <QTest>
+#include <QTimeZone>
 #include <QSqlQuery>
 #include <QDir>
 #include <QUuid>

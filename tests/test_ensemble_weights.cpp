@@ -2,6 +2,7 @@
 // EnsemblePredictor: setWeights effects, riskGrid output, dominantModel,
 // Poisson-only vs Hawkes-only, and combined uncertainty.
 #include <QTest>
+#include <QTimeZone>
 #include "models/EnsemblePredictor.h"
 #include "models/PoissonBaseline.h"
 #include "models/HawkesProcess.h"
