@@ -130,13 +130,18 @@ jobs:
           modules: qtcharts
           aqtversion: "==3.3.*"
 
-
+      - uses: microsoft/setup-msbuild@v2
 
       - name: Configure (MSVC)
 
         shell: pwsh
 
+        env:
+          QT_ROOT_DIR: ${{ env.QT_ROOT_DIR }}
+
         run: |
+
+          if (-not $env:QT_ROOT_DIR) { throw "QT_ROOT_DIR is not set" }
 
           cmake -B build-msvc-release -G "Visual Studio 17 2022" -A x64 `
 

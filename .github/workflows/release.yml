@@ -38,20 +38,30 @@ jobs:
       - name: Install NSIS
         run: choco install nsis -y
 
+      - uses: microsoft/setup-msbuild@v2
+
       - name: Build and package Windows release
         shell: pwsh
         env:
+          QT_ROOT_DIR: ${{ env.QT_ROOT_DIR }}
           SIGN_CERT: ${{ secrets.SIGN_CERT }}
           SIGN_PASSWORD: ${{ secrets.SIGN_PASSWORD }}
         run: |
+          $ErrorActionPreference = "Stop"
           $qt = $env:QT_ROOT_DIR
+          if (-not $qt) {
+            throw "QT_ROOT_DIR is not set after install-qt-action"
+          }
+          Write-Host "Using Qt at: $qt"
           $buildDir = "build-msvc-release"
           $ver = "${{ steps.version.outputs.version }}"
           $env:QT_PLUGIN_PATH = "$qt\plugins"
           $env:QT_QPA_PLATFORM = "offscreen"
+          cmake --version
           cmake -S . -B $buildDir -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_PREFIX_PATH="$qt" `
             -DSENTINEL_VERSION="$ver"
+          if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
           cmake --build $buildDir --config Release -j 4
           ctest --test-dir $buildDir -C Release -E "test_local_datasets|test_real_data_evaluation" --output-on-failure -j4
           if ($LASTEXITCODE -ne 0) { throw "ctest failed" }
