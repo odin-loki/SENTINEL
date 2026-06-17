@@ -130,7 +130,11 @@ jobs:
           modules: qtcharts
           aqtversion: "==3.3.*"
 
-      - uses: microsoft/setup-msbuild@v2
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - uses: actions/setup-cmake@v1
+        with:
+          cmake-version: "3.31.x"
 
       - name: Configure (MSVC)
 
@@ -166,6 +170,7 @@ jobs:
         env:
 
           QT_QPA_PLATFORM: offscreen
+          QT_ROOT_DIR: ${{ env.QT_ROOT_DIR }}
 
         run: |
 

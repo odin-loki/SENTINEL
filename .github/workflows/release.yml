@@ -38,7 +38,11 @@ jobs:
       - name: Install NSIS
         run: choco install nsis -y
 
-      - uses: microsoft/setup-msbuild@v2
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - uses: actions/setup-cmake@v1
+        with:
+          cmake-version: "3.31.x"
 
       - name: Build and package Windows release
         shell: pwsh
@@ -63,9 +67,11 @@ jobs:
             -DSENTINEL_VERSION="$ver"
           if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
           cmake --build $buildDir --config Release -j 4
+          if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
           ctest --test-dir $buildDir -C Release -E "test_local_datasets|test_real_data_evaluation" --output-on-failure -j4
           if ($LASTEXITCODE -ne 0) { throw "ctest failed" }
           cmake --build $buildDir --config Release --target sentinel -j 4
+          if ($LASTEXITCODE -ne 0) { throw "sentinel target build failed" }
           & packaging/windows/deploy_portable.ps1 `
             -BuildDir $buildDir `
             -QtPath $qt `
@@ -84,7 +90,7 @@ jobs:
   build-linux:
     name: Linux release
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
