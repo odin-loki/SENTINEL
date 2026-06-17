@@ -120,23 +120,16 @@ jobs:
 
 
 
-      - uses: actions/setup-python@v5
-
+      - name: Install Qt 6.6.0 (MSVC)
+        uses: jurplel/install-qt-action@v4
         with:
-
-          python-version: "3.11"
-
-
-
-      - name: Install Qt 6.6.0 (MSVC) and build tools
-
-        run: |
-
-          pip install "aqtinstall>=3.3.0"
-
-          aqt install-qt windows desktop 6.6.0 win64_msvc2019_64 -m qtcharts
-
-          aqt install-tool windows desktop tools_cmake tools_ninja
+          version: "6.6.0"
+          host: windows
+          target: desktop
+          arch: win64_msvc2019_64
+          modules: qtcharts
+          tools: tools_cmake,tools_ninja
+          aqtversion: "==3.3.*"
 
 
 
@@ -148,15 +141,12 @@ jobs:
 
         shell: pwsh
 
+        env:
+          QT_ROOT_DIR: ${{ env.QT_ROOT_DIR }}
+
         run: |
 
-          $qt = "${{ github.workspace }}\6.6.0\msvc2019_64"
-
-          $cmake = "${{ github.workspace }}\Tools\CMake_64\bin"
-
-          $ninja = "${{ github.workspace }}\Tools\Ninja"
-
-          $env:PATH = "$ninja;$cmake;$qt\bin;$env:PATH"
+          $qt = $env:QT_ROOT_DIR
 
           cmake -B build-msvc-release -G Ninja `
 
@@ -166,9 +156,7 @@ jobs:
 
             "-DCMAKE_CXX_COMPILER=cl" `
 
-            "-DCMAKE_C_COMPILER=cl" `
-
-            "-DCMAKE_MAKE_PROGRAM=$ninja/ninja.exe"
+            "-DCMAKE_C_COMPILER=cl"
 
 
 
@@ -177,14 +165,6 @@ jobs:
         shell: pwsh
 
         run: |
-
-          $qt = "${{ github.workspace }}\6.6.0\msvc2019_64"
-
-          $cmake = "${{ github.workspace }}\Tools\CMake_64\bin"
-
-          $ninja = "${{ github.workspace }}\Tools\Ninja"
-
-          $env:PATH = "$ninja;$cmake;$qt\bin;$env:PATH"
 
           cmake --build build-msvc-release -j
 
@@ -200,11 +180,7 @@ jobs:
 
         run: |
 
-          $qt = "${{ github.workspace }}\6.6.0\msvc2019_64"
-
-          $env:PATH = "$qt\bin;$env:PATH"
-
-          $env:QT_PLUGIN_PATH = "$qt\plugins"
+          $env:QT_PLUGIN_PATH = "$env:QT_ROOT_DIR\plugins"
 
           ctest --test-dir build-msvc-release `
 
