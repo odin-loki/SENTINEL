@@ -132,9 +132,8 @@ jobs:
 
       - uses: ilammy/msvc-dev-cmd@v1
 
-      - uses: actions/setup-cmake@v1
-        with:
-          cmake-version: "3.31.x"
+      - name: Install Ninja
+        run: choco install ninja -y
 
       - name: Configure (MSVC)
 
@@ -147,9 +146,15 @@ jobs:
 
           if (-not $env:QT_ROOT_DIR) { throw "QT_ROOT_DIR is not set" }
 
-          cmake -B build-msvc-release -G "Visual Studio 17 2022" -A x64 `
+          cmake -B build-msvc-release -G Ninja `
 
-            "-DCMAKE_PREFIX_PATH=$env:QT_ROOT_DIR"
+            -DCMAKE_BUILD_TYPE=Release `
+
+            "-DCMAKE_PREFIX_PATH=$env:QT_ROOT_DIR" `
+
+            "-DCMAKE_CXX_COMPILER=cl" `
+
+            "-DCMAKE_C_COMPILER=cl"
 
 
 
@@ -159,7 +164,7 @@ jobs:
 
         run: |
 
-          cmake --build build-msvc-release --config Release -j
+          cmake --build build-msvc-release -j
 
 
 
@@ -176,7 +181,7 @@ jobs:
 
           $env:QT_PLUGIN_PATH = "$env:QT_ROOT_DIR\plugins"
 
-          ctest --test-dir build-msvc-release -C Release `
+          ctest --test-dir build-msvc-release `
 
             -E "test_local_datasets|test_real_data_evaluation" `
 

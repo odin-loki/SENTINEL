@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-windows:
     name: Windows release
@@ -40,9 +44,8 @@ jobs:
 
       - uses: ilammy/msvc-dev-cmd@v1
 
-      - uses: actions/setup-cmake@v1
-        with:
-          cmake-version: "3.31.x"
+      - name: Install Ninja
+        run: choco install ninja -y
 
       - name: Build and package Windows release
         shell: pwsh
@@ -62,15 +65,19 @@ jobs:
           $env:QT_PLUGIN_PATH = "$qt\plugins"
           $env:QT_QPA_PLATFORM = "offscreen"
           cmake --version
-          cmake -S . -B $buildDir -G "Visual Studio 17 2022" -A x64 `
+          where.exe cl
+          cmake -S . -B $buildDir -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_PREFIX_PATH="$qt" `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl `
             -DSENTINEL_VERSION="$ver"
           if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
-          cmake --build $buildDir --config Release -j 4
+          cmake --build $buildDir -j 4
           if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
-          ctest --test-dir $buildDir -C Release -E "test_local_datasets|test_real_data_evaluation" --output-on-failure -j4
+          ctest --test-dir $buildDir -E "test_local_datasets|test_real_data_evaluation" --output-on-failure -j4
           if ($LASTEXITCODE -ne 0) { throw "ctest failed" }
-          cmake --build $buildDir --config Release --target sentinel -j 4
+          cmake --build $buildDir --target sentinel -j 4
           if ($LASTEXITCODE -ne 0) { throw "sentinel target build failed" }
           & packaging/windows/deploy_portable.ps1 `
             -BuildDir $buildDir `
