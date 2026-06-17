@@ -108,7 +108,7 @@ jobs:
 
   windows:
 
-    name: Windows (windows-latest, MinGW)
+    name: Windows (windows-latest, MSVC)
 
     runs-on: windows-latest
 
@@ -128,45 +128,45 @@ jobs:
 
 
 
-      - name: Install Qt 6.6.0 (MinGW) and build tools
+      - name: Install Qt 6.6.0 (MSVC) and build tools
 
         run: |
 
-          pip install aqtinstall
+          pip install "aqtinstall>=3.3.0"
 
-          aqt install-qt windows desktop 6.6.0 win64_mingw -m qtcharts
-
-          aqt install-tool windows desktop tools_mingw1310
+          aqt install-qt windows desktop 6.6.0 win64_msvc2019_64 -m qtcharts
 
           aqt install-tool windows desktop tools_cmake tools_ninja
 
 
 
-      - name: Configure (MinGW)
+      - uses: ilammy/msvc-dev-cmd@v1
+
+
+
+      - name: Configure (MSVC)
 
         shell: pwsh
 
         run: |
 
-          $qt = "${{ github.workspace }}\6.6.0\mingw_64"
-
-          $mingw = "${{ github.workspace }}\Tools\mingw1310_64"
+          $qt = "${{ github.workspace }}\6.6.0\msvc2019_64"
 
           $cmake = "${{ github.workspace }}\Tools\CMake_64\bin"
 
           $ninja = "${{ github.workspace }}\Tools\Ninja"
 
-          $env:PATH = "$ninja;$mingw\bin;$cmake;$qt\bin;$env:PATH"
+          $env:PATH = "$ninja;$cmake;$qt\bin;$env:PATH"
 
-          cmake -B build -G Ninja `
+          cmake -B build-msvc-release -G Ninja `
 
             -DCMAKE_BUILD_TYPE=Release `
 
             "-DCMAKE_PREFIX_PATH=$qt" `
 
-            "-DCMAKE_CXX_COMPILER=$mingw/bin/g++.exe" `
+            "-DCMAKE_CXX_COMPILER=cl" `
 
-            "-DCMAKE_C_COMPILER=$mingw/bin/gcc.exe" `
+            "-DCMAKE_C_COMPILER=cl" `
 
             "-DCMAKE_MAKE_PROGRAM=$ninja/ninja.exe"
 
@@ -178,17 +178,15 @@ jobs:
 
         run: |
 
-          $qt = "${{ github.workspace }}\6.6.0\mingw_64"
-
-          $mingw = "${{ github.workspace }}\Tools\mingw1310_64"
+          $qt = "${{ github.workspace }}\6.6.0\msvc2019_64"
 
           $cmake = "${{ github.workspace }}\Tools\CMake_64\bin"
 
           $ninja = "${{ github.workspace }}\Tools\Ninja"
 
-          $env:PATH = "$ninja;$mingw\bin;$cmake;$qt\bin;$env:PATH"
+          $env:PATH = "$ninja;$cmake;$qt\bin;$env:PATH"
 
-          cmake --build build -j
+          cmake --build build-msvc-release -j
 
 
 
@@ -202,15 +200,13 @@ jobs:
 
         run: |
 
-          $qt = "${{ github.workspace }}\6.6.0\mingw_64"
+          $qt = "${{ github.workspace }}\6.6.0\msvc2019_64"
 
-          $mingw = "${{ github.workspace }}\Tools\mingw1310_64"
-
-          $env:PATH = "$mingw\bin;$qt\bin;$env:PATH"
+          $env:PATH = "$qt\bin;$env:PATH"
 
           $env:QT_PLUGIN_PATH = "$qt\plugins"
 
-          ctest --test-dir build `
+          ctest --test-dir build-msvc-release `
 
             -E "test_local_datasets|test_real_data_evaluation" `
 

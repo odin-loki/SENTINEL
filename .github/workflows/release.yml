@@ -20,11 +20,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Qt 6.6.0 (MinGW)
+      - name: Install Qt 6.6.0 (MSVC) and build tools
         run: |
           pip install "aqtinstall>=3.3.0"
-          aqt install-qt windows desktop 6.6.0 win64_mingw -m qtcharts
-          aqt install-tool windows desktop tools_mingw1310
+          aqt install-qt windows desktop 6.6.0 win64_msvc2019_64 -m qtcharts
           aqt install-tool windows desktop tools_cmake tools_ninja
 
       - name: Derive version from tag
@@ -39,32 +38,35 @@ jobs:
       - name: Install NSIS
         run: choco install nsis -y
 
+      - uses: ilammy/msvc-dev-cmd@v1
+
       - name: Build and package Windows release
         shell: pwsh
         env:
           SIGN_CERT: ${{ secrets.SIGN_CERT }}
           SIGN_PASSWORD: ${{ secrets.SIGN_PASSWORD }}
         run: |
-          $qt = "${{ github.workspace }}\6.6.0\mingw_64"
-          $mingw = "${{ github.workspace }}\Tools\mingw1310_64"
+          $qt = "${{ github.workspace }}\6.6.0\msvc2019_64"
           $cmake = "${{ github.workspace }}\Tools\CMake_64\bin"
           $ninja = "${{ github.workspace }}\Tools\Ninja"
+          $buildDir = "build-msvc-release"
           $ver = "${{ steps.version.outputs.version }}"
-          $env:PATH = "$ninja;$mingw\bin;$cmake;$qt\bin;$env:PATH"
+          $env:PATH = "$ninja;$cmake;$qt\bin;$env:PATH"
           $env:QT_PLUGIN_PATH = "$qt\plugins"
           $env:QT_QPA_PLATFORM = "offscreen"
-          cmake -S . -B build -G "MinGW Makefiles" `
-            -DCMAKE_PREFIX_PATH="$qt" `
+          cmake -S . -B $buildDir -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_CXX_COMPILER="$mingw\bin\g++.exe" `
-            -DCMAKE_RC_COMPILER="$mingw\bin\windres.exe" `
+            -DCMAKE_PREFIX_PATH="$qt" `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl `
+            -DCMAKE_MAKE_PROGRAM="$ninja/ninja.exe" `
             -DSENTINEL_VERSION="$ver"
-          cmake --build build -j 4
-          ctest --test-dir build -E "test_local_datasets|test_real_data_evaluation" --output-on-failure -j4
+          cmake --build $buildDir -j 4
+          ctest --test-dir $buildDir -E "test_local_datasets|test_real_data_evaluation" --output-on-failure -j4
           if ($LASTEXITCODE -ne 0) { throw "ctest failed" }
-          cmake --build build --target sentinel -j 4
+          cmake --build $buildDir --target sentinel -j 4
           & packaging/windows/deploy_portable.ps1 `
-            -BuildDir build `
+            -BuildDir $buildDir `
             -QtPath $qt `
             -Version $ver `
             -InstallRoot "${{ github.workspace }}/packaging/pkg"
